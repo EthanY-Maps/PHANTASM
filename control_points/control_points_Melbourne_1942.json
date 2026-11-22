@@ -1,0 +1,16 @@
+{
+  "sheet": "Melbourne_1942",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/control_points_1942.json",
+  "utm_epsg": "EPSG:32755",
+  "model": "similarity",
+  "scale_m_per_px": 1.2214711508776819,
+  "rotation_deg": -6.913498060514599,
+  "translation": [
+    311427.01102997665,
+    5815986.642394478
+  ],
+  "n_pairs_used": 1911,
+  "residual_median_m": 17.181020090594735,
+  "residual_p90_m": 29.84759221037713
+}

@@ -1,0 +1,16 @@
+{
+  "sheet": "Enfield",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Enfield.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.665444502544843,
+  "rotation_deg": -7.904539454473317,
+  "translation": [
+    320973.56755744154,
+    6249870.501405396
+  ],
+  "n_pairs_used": 159,
+  "residual_median_m": 12.169001718839073,
+  "residual_p90_m": 25.66775254241811
+}

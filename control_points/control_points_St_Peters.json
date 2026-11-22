@@ -1,0 +1,16 @@
+{
+  "sheet": "St_Peters",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_St Peters.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.9965245281261974,
+  "rotation_deg": -0.3363456197524529,
+  "translation": [
+    329349.5502887823,
+    6247324.36484777
+  ],
+  "n_pairs_used": 93,
+  "residual_median_m": 8.29621344154911,
+  "residual_p90_m": 17.070303710254425
+}

@@ -1,0 +1,16 @@
+{
+  "sheet": "Alexandria",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Alexandria.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 1.550942250111812,
+  "rotation_deg": -8.358991355299327,
+  "translation": [
+    331620.7774839834,
+    6249404.663925343
+  ],
+  "n_pairs_used": 111,
+  "residual_median_m": 9.642944275716806,
+  "residual_p90_m": 20.74808326259273
+}

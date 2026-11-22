@@ -1,0 +1,16 @@
+{
+  "sheet": "Camperdown",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Camperdown.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 1.0055353949038253,
+  "rotation_deg": 1.0885201389595673,
+  "translation": [
+    330364.62320260046,
+    6249638.375709983
+  ],
+  "n_pairs_used": 111,
+  "residual_median_m": 8.694650960007,
+  "residual_p90_m": 22.628472658570313
+}

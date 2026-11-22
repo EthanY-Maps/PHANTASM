@@ -1,0 +1,131 @@
+{
+  "preprocessing": {
+    "min_tile_size": 256,
+    "max_tile_size": 256,
+    "target_tile_size": 256,
+    "overlap_pct": 0.05,
+    "pad_mode": "edge",
+    "max_workers": 4,
+    "pdf_dpi": 300
+  },
+  "road_extraction": {
+    "batch_size": 512,
+    "window_size": [
+      256,
+      256
+    ],
+    "stride": 170,
+    "use_tta": true,
+    "auto_scale": true,
+    "save_patches": false,
+    "border_margin": 0.1,
+    "skip_empty_patches": true,
+    "min_patch_std": 5.0,
+    "use_clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid_size": 16,
+    "fixed_scale": null
+  },
+  "road_vectorization": {
+    "cleaning_passes": 2,
+    "Low_threshold": 0.2,
+    "High_threshold": 0.6,
+    "spur_threshold": 3,
+    "max_hole_size": 50,
+    "gap_bridge_length": 7,
+    "junction_merge_radius": 6,
+    "min_object_size": 100,
+    "min_skeleton_component": 20,
+    "endpoint_reconnect_radius_factor": 2.0,
+    "endpoint_reconnect_max_bearing_deg": 30.0,
+    "evidence_enabled": true,
+    "evidence_ink_lum_threshold": 160,
+    "evidence_min_casing_fraction": 0.3,
+    "evidence_casing_offset_factor": 0.6,
+    "evidence_casing_extra_search_px": 2,
+    "snake_enabled": true,
+    "snake_iterations": 8,
+    "snake_search_radius_px": null,
+    "snake_image_weight": 0.55,
+    "snake_smoothness_weight": 0.45
+  },
+  "detection": {
+    "patch_size": 256,
+    "batch_size": 128,
+    "stride": 176,
+    "confidence_threshold": 0.2,
+    "overlap_threshold": 0.5,
+    "min_area": 50,
+    "unshrink_ratio": 1.5,
+    "nms_iou_threshold": 0.3
+  },
+  "ocr": {
+    "buffer_px": 10,
+    "batch_size": 32,
+    "confidence_threshold": 0.5
+  },
+  "geolocation": {
+    "buffer_threshold": 50.0,
+    "fuzzy_match_threshold": 75,
+    "propagation_initial_radius": 100.0,
+    "propagation_iterations": 20,
+    "propagation_angle_tolerance": 40.0,
+    "propagation_overtake_multiplier": 1.3,
+    "min_component_size": 5,
+    "anchor_match_threshold": 0.7,
+    "intersection_fuzzy_weight": 0.7,
+    "intersection_verification_threshold": 80,
+    "RANSAC_THRESHOLD": 0.01,
+    "TPS_SMOOTHING": 0.02
+  },
+  "visualization": {
+    "output_format": "png",
+    "dpi": 300,
+    "figure_size": [
+      12,
+      8
+    ]
+  },
+  "similarity": {
+    "enable_registration": true,
+    "registration_min_matches": 8,
+    "registration_strict_threshold": 0.25,
+    "registration_probe_radius": 400.0,
+    "ransac_residual_threshold": 200.0,
+    "initial_search_radius": 150.0,
+    "max_candidates_edges": 15,
+    "max_paths_to_solve": 5,
+    "relaxation_search_radius": 350.0,
+    "relaxation_max_candidates": 40,
+    "relaxation_max_paths": 5,
+    "relaxation_length_min": 0.1,
+    "relaxation_length_max": 6.0,
+    "bearing_hard_penalty_threshold": 0.5,
+    "pre_filter_bearing_diff": 45.0,
+    "min_len_ratio": 0.2,
+    "max_len_ratio": 5.0,
+    "virtual_node_snap_threshold": 15.0,
+    "early_exit_score": 0.1,
+    "crs_meters": null,
+    "shape_weight": 0.3,
+    "bearing_weight": 0.3,
+    "displacement_weight": 0.1,
+    "sinuosity_weight": 0.2,
+    "topology_weight": 0.1,
+    "high_confidence_threshold": 0.25,
+    "medium_confidence_threshold": 0.6,
+    "low_confidence_threshold": 0.75,
+    "very_low_confidence_threshold": 0.9,
+    "drift_tolerance_meters": 80.0,
+    "flow_magnitude_weight": 0.3,
+    "flow_direction_weight": 0.7,
+    "highway_types": [
+      "tertiary",
+      "secondary",
+      "trunk",
+      "primary",
+      "residential",
+      "unclassified"
+    ]
+  }
+}

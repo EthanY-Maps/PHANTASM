@@ -1,0 +1,16 @@
+{
+  "sheet": "Hurtsville",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Hurtsville.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 3.402832934510078,
+  "rotation_deg": -8.27133502927498,
+  "translation": [
+    316514.90940354316,
+    6246135.339626955
+  ],
+  "n_pairs_used": 350,
+  "residual_median_m": 13.045408625348843,
+  "residual_p90_m": 27.997007435265257
+}

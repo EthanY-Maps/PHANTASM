@@ -1,0 +1,16 @@
+{
+  "sheet": "Waterloo",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Waterloo.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 1.5178345102371313,
+  "rotation_deg": -8.443208178587735,
+  "translation": [
+    332914.26670262456,
+    6249235.599572931
+  ],
+  "n_pairs_used": 115,
+  "residual_median_m": 8.744528887285869,
+  "residual_p90_m": 18.555421537675752
+}

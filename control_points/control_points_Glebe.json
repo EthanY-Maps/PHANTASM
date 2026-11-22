@@ -1,0 +1,19 @@
+{
+  "sheet": "Glebe",
+  "derived_by": "scripts/bypass_geoloc.py (truth->truth registration)",
+  "pixel_truth": "data/Input/Maps of the World/Australia/Sydney/1886-1889 Atlas of Sydney/The Glebe/Truth.geojson",
+  "geolocated_truth": "data/Training/Geolocated Truths/Geolocated_Glebe.geojson",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.31380882737284044,
+  "rotation_deg": 1.4591945027083373,
+  "translation": [
+    330540.0203085016,
+    6250903.087878563
+  ],
+  "n_src_nodes": 400,
+  "n_dst_nodes": 424,
+  "n_pairs_used": 280,
+  "residual_median_m": 6.060610213577149,
+  "residual_p90_m": 10.811212882208666
+}

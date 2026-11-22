@@ -1,0 +1,16 @@
+{
+  "sheet": "Redfern",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Redfern.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 1.0179398678691958,
+  "rotation_deg": 1.2602339274773282,
+  "translation": [
+    332251.8270627258,
+    6249216.33383759
+  ],
+  "n_pairs_used": 145,
+  "residual_median_m": 4.51023961995384,
+  "residual_p90_m": 13.50389647713983
+}

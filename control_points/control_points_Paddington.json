@@ -1,0 +1,16 @@
+{
+  "sheet": "Paddington",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Paddington.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.5481189016671717,
+  "rotation_deg": -7.412749730041498,
+  "translation": [
+    334813.0196659442,
+    6250566.251145407
+  ],
+  "n_pairs_used": 165,
+  "residual_median_m": 14.660628794272604,
+  "residual_p90_m": 29.669838536824518
+}

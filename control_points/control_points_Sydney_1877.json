@@ -1,0 +1,19 @@
+{
+  "sheet": "Sydney_1877",
+  "derived_by": "scripts/bypass_geoloc.py (truth->truth registration)",
+  "pixel_truth": "data/Input/Maps of the World/Australia/Sydney/1877/Truth.geojson",
+  "geolocated_truth": "data/Training/Geolocated Truths/Geolocated_1877.geojson",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 1.8073556438388563,
+  "rotation_deg": -8.90115726187899,
+  "translation": [
+    324344.09515939467,
+    6256491.642324282
+  ],
+  "n_src_nodes": 3226,
+  "n_dst_nodes": 3049,
+  "n_pairs_used": 2258,
+  "residual_median_m": 25.957721211984225,
+  "residual_p90_m": 43.329182253138924
+}

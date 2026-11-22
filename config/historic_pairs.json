@@ -1,0 +1,27 @@
+[
+  {
+    "image":  "data/Input/1877/nla.obj-231444908.tif",
+    "mask":   "data/Input/1877/nla.obj-231444908_mask.png",
+    "weight": 1.0
+  },
+  {
+    "image":  "data/Input/1886 Atlas of Sydney/Annandale/1083235_1193-01A-Annandale.tif",
+    "mask":   "data/Truth_Data/Annandale/UNET/1083235_1193-01A-Annandale.png",
+    "weight": 1.0
+  },
+  {
+    "image":  "data/Input/1886 Atlas of Sydney/Endfield/1083257_1193-15-Enfield.tif",
+    "mask":   "data/Truth_Data/Enfield/UNET/1083257_1193-15-Enfield.png",
+    "weight": 1.0
+  },
+  {
+    "image":  "data/Input/1886 Atlas of Sydney/Macdonaldtown/1083281_1193-24A-Macdonaldtown.tif",
+    "mask":   "data/Truth_Data/Macdonaldtown/UNET/1083281_1193-24A-Macdonaldtown.png",
+    "weight": 1.0
+  },
+  {
+    "image":  "data/Input/Melbourne/vc000868-001.tif",
+    "mask":   "data/Input/Melbourne/Melbourne_Truth.png",
+    "weight": 1.0
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "sheet": "1889_Strathfield",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_1889 Strathfield.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.9935886498643867,
+  "rotation_deg": -7.57892377637762,
+  "translation": [
+    321475.1634302603,
+    6252197.707227719
+  ],
+  "n_pairs_used": 110,
+  "residual_median_m": 7.646896605687374,
+  "residual_p90_m": 22.288216114475222
+}

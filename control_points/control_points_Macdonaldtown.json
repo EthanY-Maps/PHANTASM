@@ -1,0 +1,16 @@
+{
+  "sheet": "Macdonaldtown",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Macdonaldtown.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.8065718500834668,
+  "rotation_deg": -8.51153547118861,
+  "translation": [
+    331670.86780335184,
+    6248716.155413333
+  ],
+  "n_pairs_used": 83,
+  "residual_median_m": 4.290868273902243,
+  "residual_p90_m": 14.04032104269617
+}

@@ -1,0 +1,16 @@
+{
+  "sheet": "Annandale",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Annandale.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.7838744965649094,
+  "rotation_deg": -19.299178324576488,
+  "translation": [
+    330602.28293657344,
+    6250849.536851155
+  ],
+  "n_pairs_used": 119,
+  "residual_median_m": 7.835242326025774,
+  "residual_p90_m": 22.49434247697207
+}

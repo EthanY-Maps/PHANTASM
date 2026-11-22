@@ -1,0 +1,46 @@
+.DS_Store
+.idea/
+.vscode/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.so
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime configuration
+/config/map_pipeline_config.json
+/config/local*.json
+
+# Generated caches
+/cache/
+/modules/cache/
+**/cache/
+**/.cache/
+**/*_cache.json
+*.log
+
+# Local model and checkpoint artifacts
+*.keras
+*.h5
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.joblib
+*.pkl
+
+# Data and downloaded weights (see README)
+/data/
+/models/
+*.safetensors
+
+# Local scratch outputs
+tmp/
+artifacts/
+runs/
+map_eval_results.csv

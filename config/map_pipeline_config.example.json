@@ -1,0 +1,25 @@
+{
+  "entries": {
+    "input": "/absolute/path/to/input/map_or_folder",
+    "output": "/absolute/path/to/output",
+    "model": "models/unet_road_extraction.keras",
+    "osm": "/absolute/path/to/intersections.geojson",
+    "osm_road": "/absolute/path/to/osm_roads.geojson",
+    "text_model": "models/dbnet_text_detection.keras",
+    "ocr": "models/trocr_street_names",
+    "expt": "example_run",
+    "bounding_coordinate_1": "",
+    "bounding_coordinate_2": ""
+  },
+  "modules": {
+    "pred": true,
+    "graph": true,
+    "crop": false,
+    "dim": false,
+    "text": false,
+    "ocr": false,
+    "geoloc": false,
+    "similarity": false
+  },
+  "model_parameters_file": "config/model_parameters_paper.json"
+}

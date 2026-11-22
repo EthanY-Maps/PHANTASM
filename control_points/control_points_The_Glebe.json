@@ -1,0 +1,16 @@
+{
+  "sheet": "The_Glebe",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_The Glebe.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.30964831067685317,
+  "rotation_deg": 1.091379695382834,
+  "translation": [
+    330581.05568730726,
+    6250897.745024201
+  ],
+  "n_pairs_used": 162,
+  "residual_median_m": 7.614435454608532,
+  "residual_p90_m": 19.634738762531445
+}

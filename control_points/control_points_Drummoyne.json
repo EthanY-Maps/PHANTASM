@@ -1,0 +1,16 @@
+{
+  "sheet": "Drummoyne",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/Atlas of Syndey/control_points_Drummoyne.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.9970863577602816,
+  "rotation_deg": -7.7843994832477055,
+  "translation": [
+    328105.1918470134,
+    6255660.3246362
+  ],
+  "n_pairs_used": 76,
+  "residual_median_m": 7.7327441143078275,
+  "residual_p90_m": 17.880931415464577
+}

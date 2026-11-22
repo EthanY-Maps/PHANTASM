@@ -1,0 +1,16 @@
+{
+  "sheet": "Sydney_1903",
+  "derived_by": "scripts/bypass_geoloc.py (existing control-point pairs)",
+  "source": "data/Input/Maps of the World/Truths/control_points_1903_Sydney.json",
+  "utm_epsg": "EPSG:32756",
+  "model": "similarity",
+  "scale_m_per_px": 0.996663682812436,
+  "rotation_deg": -7.841504428726739,
+  "translation": [
+    322483.4371370355,
+    6269606.406869635
+  ],
+  "n_pairs_used": 3717,
+  "residual_median_m": 30.026638883442594,
+  "residual_p90_m": 45.61749523732422
+}

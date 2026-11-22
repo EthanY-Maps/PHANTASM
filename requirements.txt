@@ -1,0 +1,45 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+scikit-learn
+scikit-image
+joblib
+matplotlib
+seaborn
+
+# Imaging and document handling
+Pillow
+opencv-python
+pdf2image
+albumentations
+
+# Geospatial and graph tooling
+networkx
+shapely
+geopandas
+geopy
+osmnx
+pyproj
+rtree
+rapidfuzz
+requests
+
+# App and visual tooling
+streamlit
+streamlit-folium
+streamlit-searchbox
+folium
+plotly
+tqdm
+
+# ML / inference
+tensorflow
+torch
+torchvision
+transformers
+evaluate
+pyclipper
+
+# Stage 5 parameter search (scripts/tune_matching.py)
+optuna
