@@ -1,0 +1,27 @@
+{
+  "doi": "10.1016/j.compenvurbsys.2026.102558",
+  "title": "PHANTASM: A pipeline for historic analysis, network transformation, and spatial matching",
+  "authors": [
+    "Ethan Yin",
+    "David Levinson"
+  ],
+  "version": "Published Version of Record, HTML capture; publisher PDF download unavailable",
+  "journal": "Computers, Environment and Urban Systems",
+  "volume": "132",
+  "article_number": "102558",
+  "issue_date": "2027-03",
+  "online_date": "2026-11-24",
+  "captured_on": "2026-11-25",
+  "source_url": "https://www.sciencedirect.com/science/article/pii/S0198971526001602",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "completeness": {
+    "main_html_characters": 1906394,
+    "tables": 12,
+    "numbered_equations": 21,
+    "figure_images": 13,
+    "references": 40,
+    "ending_verified": "Wilson (2012), Atlas of the suburbs of Sydney; accessed 26 February 2026; publisher copyright ending present."
+  },
+  "transformations": "publisher-main.html is the complete unmodified main DOM capture. PHANTASM-published.html adds a document wrapper, source/licence note and basic layout CSS, and rewrites the 13 article image src values to local copies. article-text.txt is the publisher-rendered text. All figures/tables, appendix algorithms, availability statement and references are retained. Exact publisher MathJax typography was not recreated."
+}

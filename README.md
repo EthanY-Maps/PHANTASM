@@ -71,6 +71,10 @@ The scripts in `scripts/` regenerate the paper's tables and figures. They read i
 
 `_superceded/Similarity/` holds the original Stage 5 tuning (`Tuning.py`) and buffer evaluation (`Comparison.py`) code, kept unchanged because the paper's figures came from it. `evaluation_code/` holds the Stage 1 and graph evaluation scripts.
 
+## Published paper
+
+Published online 24 November 2026; volume 132, March 2027, article 102558. [DOI](https://doi.org/10.1016/j.compenvurbsys.2026.102558) · [Full published article archive](paper/README.md). Code and release assets are unchanged by this publication update.
+
 ## Citation
 
 ```bibtex
@@ -78,7 +82,11 @@ The scripts in `scripts/` regenerate the paper's tables and figures. They read i
   author  = {Yin, Ethan and Levinson, David},
   title   = {{PHANTASM}: A Pipeline for Historic Analysis, Network Transformation, and Spatial Matching},
   journal = {Computers, Environment and Urban Systems},
-  year    = {2026}
+  year    = {2027},
+  volume  = {132},
+  pages   = {102558},
+  month   = mar,
+  doi     = {10.1016/j.compenvurbsys.2026.102558}
 }
 ```
 

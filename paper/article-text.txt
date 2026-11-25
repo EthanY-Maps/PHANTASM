@@ -1,0 +1,1217 @@
+Computers, Environment and Urban Systems
+Date: March 2027
+Show more
+Research article
+Open access
+Under a Creative Commons license
+Get rights and content
+Research paper
+PHANTASM: A pipeline for historic analysis, network transformation, and spatial matching
+Ethan Yin
+, 
+David Levinson
+Show more
+View PDF
+Download full issue
+Cite
+Add to Mendeley
+Share
+10.1016/j.compenvurbsys.2026.102558
+Article
+Outline
+Highlights
+Abstract
+Keywords
+1. Introduction
+2. Notation and parameters
+3. Related work
+4. Data
+5. Methodology
+6. Results and evaluation
+7. Discussion and conclusion
+CRediT authorship contribution statement
+Declaration of Generative AI and AI-assisted technologies in the writing process
+Funding
+Declaration of competing interest
+Appendix. Name propagation algorithms
+Data availability
+References
+Show full outline
+Figures (13)
+Show 7 more figures
+Tables (12)
+Table 1. Mathematical notation and pipeline parameters.
+Table 2. Role of each map by pipeline stage. “Held-out” means the map contributed no training data to that stage. Held-out maps with ground truth for Stages 1–2 are reported as test maps in Table 4, Table 6.
+Table 3. Hyperparameter search space. All weights are normalised such that ∑wi=1 before execution.
+Table 4. U-Net performance comparison across maps.
+Table 5. Width sensitivity of pixel recall. The predicted graph is rasterised at increasing stroke widths against the annotated mask; the geometry is identical in every row and only the rendering width changes...
+Table 6. Graph construction performance across maps.
+Show 6 more tables
+Highlights
+•
+The pipeline converts scanned historic maps into georeferenced road graphs.
+•
+U-Net segmentation reaches Dice 0.856 on an unseen 1903 sheet and 0.840 on Melbourne.
+•
+Graph construction reaches F1 0.829–0.882 on four held-out sheets from two cities.
+•
+Semi-automatic geolocation carries 14 maps to median residuals of 4.3–30 m.
+•
+The matcher finds 97.4% of historic links with a modern road within 30 m.
+Abstract
+Historic street maps record urban development and the growth of transport networks, but they survive as raster images with no spatial reference and substantial noise. This paper presents a pipeline that converts historic raster maps into georeferenced road graphs and matches them against OpenStreetMap. Its five stages segment roads with a U-Net, convert the predictions into a topologically consistent graph, read and propagate street names with optical character recognition, geolocate the map by matching recognised names to modern intersections, and match historic links to modern links by geometric similarity. The pipeline is evaluated on the John Sands maps of Sydney (1877–1903), twelve sheets of the 1886 Atlas of the Suburbs of Sydney, and a held-out 1942 map of Melbourne. Segmentation reaches a Dice coefficient of 0.856 on the unseen 1903 sheet and 0.840 on Melbourne, and graph construction reaches F1 of 0.829 to 0.882 on the held-out sheets. Fully automated geolocation succeeds only on the 1903 sheet; a semi-automatic mode using manually placed control points extends the evaluation to fourteen maps, with median residuals of 4.3 to 30 m. Matching reaches F1 of 0.573 to 0.724 on the atlas sheets and 0.651 on the 1903 sheet. The pipeline matches 97.4% of the historic links that have a modern road within 30 m, so the matching scores depend mainly on how much of each historic network has a modern counterpart.
+Keywords
+Historic map digitisation; Road extraction; Graph vectorisation; Optical character recognition; OpenStreetMap; Urban morphology
+Previous article
+1. Introduction
+Historic street maps preserve valuable information on street layouts, transport networks, and urban form, but they remain difficult to use quantitatively because most survive only as scanned raster images without explicit spatial reference. Extracting road networks from such maps at scale is challenging because of degradation, stylistic variation, dense annotation, and hand-drawn geometric distortion. Traditional digitisation relies on manual tracing and georeferencing, which is slow and difficult to scale. We refer to this condition, in which a raster map contains rich spatial information but no direct coordinate system or network representation, as the “blind map” problem.
+Recent deep learning methods, particularly U-Net-style architectures (Ronneberger et al., 2015) and later cartographic extensions (Patel et al., 2022), have improved automated road extraction from historic maps. However, these methods usually produce segmentation masks rather than the graph representations needed for network analysis, and address only part of the workflow, such as segmentation, text extraction, or georeferencing in isolation.
+This paper presents PHANTASM, an end-to-end pipeline for historic street map digitisation. The pipeline:
+1.
+extracts road networks from raster historic maps using a U-Net segmentation model;
+2.
+converts binary road predictions into graph representations for transport network analysis;
+3.
+extracts and propagates street-name information using OCR and spatial reasoning;
+4.
+performs automated geolocation through semantic matching of historic intersection names to contemporary OSM data; and
+5.
+supports quantitative comparison between reconstructed historic networks and modern road systems.
+Segmentation is evaluated on five held-out maps and graph construction on four, across three map series and two cities. Fully automated geolocation is demonstrated on one map, the 1903 John Sands sheet, which is the only sheet with enough validated OCR anchors, so that result is a demonstration of feasibility rather than evidence of generalisation. Stages 4–5 are evaluated on fourteen maps using the semi-automatic geolocation mode of Section 5.4.8, in which an operator places a small number of control points that the system extends by junction matching.
+2. Notation and parameters
+Table 1 lists the notation and parameter values used throughout. Where a parameter is tuned by the search described in Section 5.7, the value given is its default; the tuned values are reported in Table 10.
+
+Table 1. Mathematical notation and pipeline parameters.
+
+Symbol	Description	Value
+Stage 1: Segmentation & processing
+𝐼∈ℝ𝐻×𝑊×𝐶
+	Input image dimensions	–
+𝐻tile,𝑊tile
+	Training patch dimensions	256,256
+ px
+𝑁epoch
+	Sampled training tiles per epoch	2000
+𝑁val
+	Validation patch count	400
+𝐸train
+	Training epochs	100
+𝐾morph
+	Morphological operations kernel size	5 × 5
+𝐾neigh
+	Neighbour summation kernel for node detection	3 × 3
+𝑇h
+	High hysteresis threshold	0.6
+𝑇low
+	Low hysteresis threshold	0.2
+Stage 2: Graph construction
+𝛿merge
+	Node merging distance threshold	5 m
+𝑁min
+	Minimum component size for retention	10 nodes
+Stage 3: Text & name propagation
+𝑑search
+	Text-to-road search radius	100 px
+𝜃turn
+	Maximum deviation angle for name flow	40°
+𝛼decay
+	Confidence decay rate per segment	1.5%
+𝛾overtake
+	Confidence multiplier to trigger name replacement	1.3
+𝛽touch
+	Road-contact multiplier for text assignment	40
+𝜎
+	Gaussian bandwidth for name assignment	100
+𝜏anchor
+	Anchor-match score required to accept an intersection anchor	0.7
+𝜏fuzz
+	Fuzzy-match score against the street-name dictionary (0–100)	75
+𝜏verify
+	Fuzzy score above which an intersection is marked verified (0–100)	80
+Stage 4: Geolocation (RANSAC & TPS)
+𝛿inlier
+	RANSAC inlier threshold, applied to anchor clouds min–max normalised to [0,1]
+; approximately 1% of the anchor extent, or about 300 m on the 1903 sheet	0.01
+𝜆
+	TPS smoothing parameter	Dynamic
+𝑁trials
+	RANSAC iterations	5000
+𝑁seed
+	Manually placed control points, semi-automatic mode	2–61
+Stage 5: Similarity & Matching
+Distances & Lengths
+𝑑air
+	Euclidean distance between path endpoints	–
+𝑑𝐻
+	Directed Hausdorff distance	–
+𝐿ℎ
+	Length of historic link	–
+𝐿cand
+	Network length of candidate path	–
+Radii
+𝜅relax
+	Pass 2 radius multiplier applied to 𝑅strict
+ during tuning	2.5
+𝑅relaxed
+	Pass 2 candidate search radius (default; 𝜅relax⁢𝑅strict
+ when tuned)	350 m
+𝑅strict
+	Pass 1 candidate search radius (default; tuned)	150 m
+Angles
+𝜃internal
+	Internal angle of candidate geometry	–
+Thresholds
+𝜖
+	Pass 0 RANSAC residual threshold	0.01°
+𝜏buffer
+	Buffer tolerance for evaluation metrics	5 m
+𝜏dogleg
+	Dog-leg angle penalty threshold	45°
+𝐶high
+	Dissimilarity below which a match is tier High (default; tuned)	0.25
+𝐶med
+	Upper bound of tier Medium; results use High+
+Medium (default; tuned)	0.60
+𝐶low
+	Upper bound of tier Low (𝐶med+0.15
+ when tuned)	0.75
+𝐶vlow
+	Upper bound of tier Very low; above this a match is rejected	0.90
+𝜏sin
+	Sinuosity penalty threshold	1.10
+Normalisation
+𝜈drift
+	Warp score displacement normalisation factor	80
+𝜌min
+𝐿
+	Minimum allowable path-to-link length ratio	Optimised
+𝜌max
+𝐿
+	Maximum allowable path-to-link length ratio	Optimised
+Weights
+𝛽𝐻
+	Reverse Hausdorff weighting factor	0.2
+𝜏br
+	Bearing fraction above which a hard penalty applies (90°)	0.5
+𝑃br
+	Hard bearing penalty, 2⁢(𝑆bearing−𝜏br)
+ beyond 𝜏br
+	–
+𝑃len
+	Length-ratio penalty outside the gate; 5⁢(𝜌min
+𝐿−𝜌𝐿)
+ below, 0.5⁢(𝜌𝐿−𝜌max
+𝐿)
+ above	–
+𝛿cons
+	OSM intersection consolidation tolerance before matching	25 m
+𝑤br
+	Bearing weight	Optimised
+𝑤dir
+	Warp direction weight	Optimised
+𝑤mag
+	Warp magnitude weight	Optimised
+𝑤sh
+	Shape weight	Optimised
+𝑤sin
+	Sinuosity weight	Optimised
+𝑤top
+	Topology weight	Optimised
+𝑤warp
+	Warp weight	Optimised
+3. Related work
+3.1. Deep learning for historic road extraction
+Advances in computer vision have enabled progress in automated road extraction from historic maps. Deep learning architectures, particularly encoder–decoder networks, are now a common approach for pixel-level road segmentation from cartographic imagery. Broad reviews situate these developments within a wider methodological landscape: Jiao et al. (2021) synthesise road-feature extraction methods from raster maps across traditional and deep learning paradigms, while Chiang et al. (2020) outline the broader scientific challenges and best practices associated with the use of historic maps.
+Within this literature, multi-class road segmentation on historic cartography has shown clear gains from modern deep architectures, but also clear sensitivity to class imbalance and map style. On the Deutsche Heereskarte 1:200,000 Türkei (DHK 200 Turkey) maps, the strongest configuration reported by Avcı et al. (2022) combined a split-attention encoder (Timm resnest200e) with U-Net++, yielding 98.99% overall accuracy, 41.99% IoU, 51.41% precision, and 69.7% recall across five road classes. The gap between overall accuracy and the class-specific metrics underscores a recurring issue in historic-map segmentation: easy background pixels can dominate aggregate performance even when the road predictions themselves remain imperfect.
+Attention-enhanced encoder–decoder models have also improved road segmentation in remote sensing more generally. For example, the CNN-transformer U-Net variants examined by Wang et al. (2023) illustrate the value of attention mechanisms for extracting elongated transport features. However, the underlying imagery in that literature is contemporary satellite data rather than degraded historic cartography, so the reported gains cannot be transferred directly without accounting for symbology, annotation density, and physical map deterioration.
+The literature also suggests that intersection extraction should be treated as a distinct task rather than a simple by-product of road segmentation. On USGS historical topographic maps, Saeedimoghaddam and Stepinski (2020) framed intersection detection as an object-detection problem using a region-based CNN with an Inception-ResNet v2 encoder, reporting F1 scores of 0.80 and 0.86 for single- and double-line road symbols respectively. That work further showed that edge density, colour complexity, and image sharpness materially affect extraction quality, reinforcing the need for a separate intersection-identification stage and motivating the name-based anchoring strategy adopted in Stage 4 of the present pipeline.
+3.2. Historic map text detection and recognition
+The extraction of text information from historic maps has received growing attention in parallel with advances in text detection and OCR. End-to-end map text reading systems have increasingly combined detection and recognition within a single learning framework, with dynamic text synthesis emerging as one response to the scarcity of labelled historic training data (Weinman et al., 2019).
+More recent OCR progress has been driven by transformer architectures. TrOCR provides a pre-trained transformer-based recognition framework that can be adapted to OCR tasks (M. Li et al., 2021), while DTrOCR explores a decoder-only alternative for character recognition (Fujitake, 2023). For historic maps specifically, these models are most relevant not as general OCR benchmarks, but as evidence that recognition quality can be improved when sequence modelling is coupled with transfer learning.
+At the pipeline level, systems such as MapKurator demonstrate that text detection, recognition, and linking can be integrated into a single workflow for cartographic materials (Kim et al., 2023). Synthetic data generation has also become an important supporting strategy for this area (Z. Li et al., 2021), and recent benchmark competitions have helped standardise evaluation across text detection, recognition, and linking subtasks (Li et al., 2024).
+Current work on historic map text spotting increasingly emphasises robustness to scale variation, deformation, and collection-level processing. Hyper-local deformable transformers have been applied to text spotting on historic maps (Lin & Chiang, 2024), tightly coupled recognition pipelines have linked character-, word-, and place-level inference (Ray et al., 2019), and large-scale label extraction workflows have addressed the challenge of processing entire map collections rather than isolated sheets (Schlegel, 2021). Together, this literature supports the inclusion of a dedicated OCR and label-linking stage within an end-to-end historic map digitisation pipeline.
+3.3. Road network vectorisation and graph construction
+While deep learning approaches excel at identifying road pixels, they typically output probability maps or binary masks that require further processing before they become useful for transport network analysis.
+Recent work on historic-map vectorisation has addressed parts of this gap, but not always in a way that yields graph structures suitable for network analysis. The framework of Jiao et al. (2024), for example, combines road vectorisation and classification through deep CNNs and symbol-painting functions tailored to cartographic road classes. Although that approach reports completeness scores as high as 90.69% for some classes, its primary emphasis remains geometric reconstruction and classification rather than the generation of topologically rigorous node-link graphs.
+This distinction between geometric completeness and network usability has become more explicit in benchmark work on historical-map vectorisation. Standardised datasets and evaluation metrics introduced by Chen et al. (2024) highlight the trade-off between shape completeness and topological correctness, thereby reinforcing the need for topology-aware post-processing after segmentation. That need is central to Stage 2 of the present pipeline, where pixel predictions are converted into graph representations rather than retained as isolated polylines.
+Large-scale historical road reconstruction has also been attempted by projecting historic evidence onto modern street databases. The probabilistic Road Overlap Indicator (ROI) approach reported by Uhl et al. (2022) achieved F1 scores up to 0.95 across more than 300,000 road segments, demonstrating the scalability of reference-assisted reconstruction. At the same time, reliance on the modern street network as the structural backbone limits the capacity to recover demolished roads, geometric shifts, or planned alignments that never persisted into the contemporary city.
+3.4. Temporal network analysis and urban morphology
+Spatial-network theory provides the conceptual foundation for interpreting reconstructed historic street graphs. Reviews of spatial networks emphasise how edge costs, planarity constraints, and betweenness centrality shape transport systems (Barthélemy, 2011), while early topological analyses of urban street networks formalised computational and functional graph representations and identified small-world structure in large street systems (Jiang & Claramunt, 2004). These ideas underpin the temporal network comparisons that the reconstructed networks are intended to support.
+Longitudinal studies of urban growth have shown that street- network evolution is not random, but reflects identifiable structural processes. Nearly two centuries of network change north of Milan, for example, can be interpreted through the dual processes of densification around existing centres and exploration at the urban frontier (Strano et al., 2012). That work also showed that high-centrality roads tend to form persistent structural backbones across time, providing a useful theoretical basis for interpreting centrality patterns in reconstructed historic street networks.
+Comparable longitudinal evidence from Greater London indicates that major spatial expansion can coexist with relatively stable average nodal connectivity, even as geometric and topological properties change over time (Masucci et al., 2013). A key limitation of that earlier literature, however, is its reliance on manually digitised historic networks; the present pipeline is designed to automate that reconstruction step and thereby extend longitudinal network analysis to larger map collections.
+The contrast between organic growth and planned intervention has been especially clear in historical analyses of Paris, where Haussmann’s mid-nineteenth-century interventions redistributed betweenness centrality from radial corridors towards a more reticulated arterial structure (Barthélemy et al., 2013). That distinction provides a comparative lens for future analysis of Sydney’s colonial-era and post-expansion networks.
+For evaluation, the closest methodological precedent is the semi-automated reconstruction framework of Turner et al. (2023), in which historic maps are geolocated onto modern street networks and contemporary geometry is reduced to fit historic representations. That dataset is used here as a validation benchmark, while the present pipeline extends the degree of automation beyond semi-manual geolocation and matching.
+4. Data
+4.1. Historic cartography: The John Sands collection
+The primary dataset for this study comprises digitised plates from the John Sands’ Sydney and Suburban Directory, specifically the editions published in 1877 and 1903. These maps were selected for their cartographic standard and their coverage of Sydney’s rapid urban expansion period.
+The maps were obtained from the City of Sydney Archives. The 1877 map, used primarily for training the U-Net segmentation model, covers the Sydney Central Business District (CBD) and immediate surrounds. The 1903 map (Fig. 1) (John Sands (Firm), 1903), used for the end-to-end pipeline evaluation, extends this coverage to include the expanding inner-city suburbs.
+•
+The 1877 map consists of a single raster image with dimensions of 10,606 × 8314 pixels.
+•
+The 1903 map consists of a single raster image with dimensions of 23,804 × 35,768 pixels, trimmed to 23,348 × 35,346 pixels for processing.
+Download: Download high-res image (3MB)
+Download: Download full-size image
+
+Fig. 1. John Sands map of Sydney from 1903, used as the main city-scale test map for end-to-end pipeline evaluation.
+
+City of Sydney Archives (John Sands (Firm), 1903).
+4.2. The Atlas of the Suburbs of Sydney
+The secondary dataset used to increase the generalisation of the models, and to provide additional testing maps, was the scanned Atlas of the Suburbs of Sydney from the State Library of NSW. This atlas was initially published in 1886 and contains 51 sheets of the suburbs and boroughs of Sydney (Wilson, 2012).
+A 1942 map of Melbourne, held out from training at every stage (Table 2), tests generalisation to a different city and cartographic style from the John Sands and atlas maps.
+Table 2 gives the role of each map at each stage. A map held out for a stage contributed no training data to that stage, so its results measure how well that stage generalises.
+Most archived maps are stored as PNG or JPG files, while some maps such as Enfield have high-quality TIF downloads available. As such, resolution varies across the atlas.
+
+Table 2. Role of each map by pipeline stage. “Held-out” means the map contributed no training data to that stage. Held-out maps with ground truth for Stages 1–2 are reported as test maps in Table 4, Table 6.
+
+Map	Series	Stage 1	Stage 2	Stage 3	Stages 4–5
+Sydney 1877	John Sands	Train	Train	Train	Train
+Sydney 1903	John Sands	Held-out	Held-out	Eval	Eval
+Strathfield	Atlas	Train	Train	Text train	Eval
+Enfield	Atlas	Held-out	Held-out	Text train	Eval
+St Peters	Atlas	Train	Train	Text train	Eval
+Annandale	Atlas	Held-out	Held-out	Eval	Eval
+Macdonaldtown	Atlas	Held-out	Held-out	Eval	Eval
+Waterloo	Atlas	Train	Train	Eval	Eval
+Alexandria	Atlas	Held-out	Held-out	–	Eval
+Camperdown	Atlas	Train	Train	–	Eval
+Drummoyne	Atlas	Held-out	Held-out	–	Eval
+Paddington	Atlas	Held-out	Held-out	–	Eval
+Redfern	Atlas	Held-out	Held-out	–	Eval
+The Glebe	Atlas	Held-out	Held-out	–	Eval
+Melbourne 1942	Melbourne	Held-out	Held-out	–	Eval
+4.3. Ground truth and reference data
+Ground truth and reference data were assembled from three sources, each serving a different role in the pipeline.
+4.3.1. Manual annotations for training and intermediate validation
+Pixel-level road masks were created through manual digitisation using EISeg (Efficient Interactive SEGmentation) (Hao et al., 2022), an interactive segmentation tool that accelerates annotation through click-based refinement. These masks provide the training and evaluation targets for the U-Net road extraction stage across both the Sydney maps and the additional held-out Melbourne test sheet.
+For graph-level validation, manually digitised road graphs were created for the maps used in the Stage 2 comparison, including the 1877 John Sands map, the evaluated Sydney atlas sheets, and the Melbourne 1942 sheet. In addition, the 1903 map output was manually geolocated against reference data for transformation accuracy assessment.
+4.3.2. Contemporary OpenStreetMap baseline
+Contemporary road network data were extracted from OpenStreetMap (OSM) (Boeing, 2025) via the Overpass API (Export date: January 2026) and filtered to include only drivable roads, excluding tunnels and motorways that would not appear in historic surface maps. This dataset serves as the modern spatial baseline against which the geolocated historic graph is matched and from which the street and intersection dictionaries used in later stages are derived.
+OSM represents the road network as it exists in 2026; as such, roads that were present previously but have since been demolished, pedestrianised, or absorbed into larger parcels will appear as false positives against this baseline, while modern infrastructure built after the tested maps will appear as false negatives.
+An official cadastral or survey network would be positionally more accurate than OSM, but the difference is small compared with the registration residual of the hand-drawn source. Under automated geolocation that residual is about 120 m, around two orders of magnitude larger than any likely positional difference between OSM and an official product; with control points it falls to 4.3–30 m, and on the best-registered sheets an official product could make a measurable difference at a 5 m buffer. OSM was used because it is openly licensed and consistent across countries, which allows the pipeline to be applied to other cities and archives.
+4.3.3. Historic reference network for end-to-end evaluation
+End-to-end matching was also evaluated against the validated historic Sydney road network of Turner et al. (2023), which was produced through semi-automated georeferencing of historic maps onto modern street networks. This dataset provides a more appropriate historical reference for the 1903 evaluation than raw OSM alone because it partially decouples the historic network extent from the present-day street system.
+The reference under-represents roads that left no modern geometric trace, and Section 5.8 sets out how this affects the reported precision and recall.
+5. Methodology
+Fig. 2 shows the five stages of the pipeline, which end with the historic network matched to the modern OSM road network.
+Download: Download high-res image (381KB)
+Download: Download full-size image
+
+Fig. 2. Overview of the five-stage PHANTASM workflow, from raster historic map input to georeferenced network matching against OSM.
+
+5.1. Stage 1: Road network extraction
+5.1.1. Problem formulation
+Given an input historic map image 𝐼∈ℝ𝐻×𝑊×𝐶
+, where 𝐻
+, 𝑊
+, and 𝐶
+ are height, width, and colour channels, together with an approximate geographic bounding box 𝐵={(𝜙min,𝜆min),(𝜙max,𝜆max)}
+, the goal is to produce a probability map 𝑃∈ℝ𝐻×𝑊
+. Each pixel value in 𝑃
+ represents the likelihood between 0 and 1 that the corresponding location belongs to a road. The Dice coefficient (𝐷⁢𝑖⁢𝑐⁢𝑒
+) for a predicted binary mask (𝑀⁢𝑎⁢𝑠⁢𝑘
+) and ground truth (𝑇⁢𝑟⁢𝑢⁢𝑡⁢ℎ
+) is defined as:
+(1)
+𝐷⁢𝑖⁢𝑐⁢𝑒=
+2⁢|𝑀⁢𝑎⁢𝑠⁢𝑘∩𝑇⁢𝑟⁢𝑢⁢𝑡⁢ℎ|
+|𝑀⁢𝑎⁢𝑠⁢𝑘|+|𝑇⁢𝑟⁢𝑢⁢𝑡⁢ℎ|
+5.1.2. U-Net architecture and training
+The road extraction process uses a U-Net encoder/decoder architecture (Ronneberger et al., 2015). The network uses symmetric encoder and decoder paths with skip connections to preserve spatial resolution during the segmentation process. The model is designed with spatial dropouts across all layers to minimise overfitting.
+The segmentation model is trained on the John Sands 1877 map of Sydney (John Sands (Firm), 1877) using an online importance sampling strategy. Rather than using static pre-tiling, the source image and related ground truth are loaded into memory and sampled dynamically. Training patches of size 𝐻tile×𝑊tile
+ are extracted at random coordinates, using a rejection sampling mechanism that prioritises the minority class, in this case the road network. This ensures patches contain road features, minimising class imbalance from the predominantly empty background. A sample of these patches can be seen in Fig. 3.
+Data augmentation is then applied onto the extracted tiles at random using the Albumentations Python library (Buslaev et al., 2020), including rotation and horizontal and vertical flipping. Since this sampling has no natural epoch boundary, each epoch was capped at 𝑁epoch
+ tiles. A fixed validation set of 𝑁val
+ patches was extracted before training and reused across all epochs.
+Download: Download high-res image (382KB)
+Download: Download full-size image
+
+Fig. 3. Examples of randomly sampled training patches from the 1877 map, with the proportion of road pixels in each patch shown to illustrate class-balanced sampling.
+
+The model uses the Adam optimiser (Kingma & Ba, 2017) validating against a truth map using 𝐷⁢𝑖⁢𝑐⁢𝑒
+ loss over 𝐸train
+ epochs.
+Training converged to a 𝐷⁢𝑖⁢𝑐⁢𝑒
+ loss of 0.12, with a final 𝐷⁢𝑖⁢𝑐⁢𝑒
+ coefficient of 0.892 on the validation patches from the 1877 sheet; the training and validation scores stayed close throughout, which indicates little overfitting.
+5.2. Stage 2: Graph construction and vectorisation
+5.2.1. Post-processing and binarisation
+The probability map output from the road extraction requires post-processing to become usable as a road network. This is done by taking the raw probabilities and applying hysteresis thresholding, which assigns pixels into two groups: “High Threshold” being the group that has probability greater than or equal to 𝑇h
+ of being in the road class, and “Low Threshold” containing those with probability between 𝑇low
+ and 𝑇h
+. These low-threshold pixels are then checked to see if they are connected to any pixels within the high-threshold group; if so the pixel is kept, otherwise it is removed. This reconnects broken roads caused by map artefacts, while still filtering low-probability noise.
+The output then undergoes morphological cleaning using OpenCV (Bradski, 2000) operations with kernel 𝐾morph
+. Morphological opening uses cv2.MORPH_OPEN to remove small noise artefacts and separate connected components that should be distinct, while morphological closing uses cv2.MORPH_CLOSE to fill small gaps within road segments and connect nearby road fragments.
+5.2.2. Skeletonisation
+The cleaned binary road map is converted to a skeletal representation using the skeletonise function of the scikit-image Python library (van der Walt et al., 2014), reducing thick road segments to single-pixel centrelines, preserving topology for graph conversion.
+5.2.3. Initial node creation and neighbourhood definition
+Before the predicted map can be turned into a usable graph representation, a map of the intersection and dead end points of the network needs to be produced. This is done using convolution with a neighbour kernel:
+𝐾=
+⎡
+⎢ ⎢
+⎣
+1	1	1
+1	0	1
+1	1	1
+⎤
+⎥ ⎥
+⎦
+This kernel, denoted 𝐾neigh
+, slides over every non-zero pixel within the skeleton image, multiplying the binary pixels within the corresponding neighbourhood and computing their sum. This yields the neighbour count for every pixel. Using this, every road pixel is classified as follows:
+•
+1 Neighbour: A Dead End Point
+•
+2 Neighbours: An Intermediary Point
+•
+>2
+ Neighbours: An Intersection Point
+5.2.4. Graph tracing
+The next goal is to turn the remaining pixels into multiline strings lying between intersection points and/or endpoints. This is achieved through a tracing loop that passes over all non-intermediary point nodes and applies the following algorithm.
+Download: Download high-res image (185KB)
+Download: Download full-size image
+The output of this algorithm is a network containing the intersection and endpoints in the historic map, with roads connecting them represented by multiline strings.
+5.2.5. Graph post-processing and cleanup
+1.
+Intersection-Based Component Filtering: Remove connected components containing no intersection nodes, eliminating prediction artefacts
+2.
+Size-Based Component Filtering: Remove components containing 𝑁min
+ or fewer nodes
+3.
+Merge Close Similar Nodes: Intersection nodes of similar types are merged into their midpoint if they are within 𝛿merge
+ of each other
+4.
+Linear Rectification: Replaces links with low deviation from their straight-line approximation by that approximation (Douglas & Peucker, 1973)
+5.
+Smoothing: Applies a weighted moving average across links while preserving sharp turns and corners
+The filtering process removes small unconnected components and merges spurious intersections generated from noise within the prediction. Fig. 4 shows the Stage 2 sequence on a tile from the 1903 map.
+Download: Download high-res image (312KB)
+Download: Download full-size image
+
+Fig. 4. Example of the Stage 2 post-processing sequence for a tile from the 1903 Sydney map, showing the transition from raster input to binary mask, skeleton, and final vector graph.
+
+5.3. Stage 3: Street name detection and extraction
+5.3.1. Text detection
+The third stage focuses on extracting intersection and street identifiers for geolocation. A dictionary of intersections and roads within Sydney and Greater Sydney is compiled from OpenStreetMap (OSM) to refine the spatial allocation of the predictions.
+To detect text within the maps, a DBNet++ (Differentiable Binarisation Network) architecture was implemented (Liao et al., 2022). Instead of treating text detection as a basic segmentation task, DBNet++ predicts the core area of the text (probability map) and the gradient boundaries around it (threshold map), allowing the model to separate closely printed or overlapping text.
+As historic maps are too large to process at once, the model uses a sliding window approach to evaluate the image across multiple scales. The network outputs are then expanded into coordinate polygons to form bounding boxes around the text. Finally, a spatial index (R-tree) and a Union-Find algorithm are used to identify and merge overlapping polygons from the different scales into distinct, single text blocks.
+5.3.2. Text extraction and pre-processing
+After text detection, the coordinate bounds of the text are sent through an extraction algorithm, illustrated in Fig. 5.
+1.
+Text Box Cropping: An automated algorithm crops detected bounding boxes from the original image using the polygon masks generated during detection, creating individual text image files
+2.
+Orientation Normalisation: Each cropped text image is automatically rotated to horizontal orientation by identifying the longest link of the bounding box and aligning it with the 𝑥
+-axis, ensuring consistent text orientation for OCR processing
+3.
+Image Quality Enhancement: Cropped text images undergo pre-processing to improve recognition accuracy, including contrast enhancement and noise reduction optimised for historic typography
+Download: Download high-res image (537KB)
+Download: Download full-size image
+
+Fig. 5. Example of the OCR preparation workflow, from DBNet++ detections on the map to rotated and cropped text images for recognition.
+
+5.3.3. OCR recognition
+The pre-processed text images are processed using a trained OCR recognition model based on the TrOCR (Transformer OCR) framework (M. Li et al., 2021). This model has been trained on a custom dataset containing historic map text and human made predictions. As such the dataset includes period appropriate font styles, degradation artefacts, and variable text quality. The OCR predictions, including recognised text and confidence scores, are integrated back into the original JSON file alongside the spatial bounding box information.
+5.4. Stage 4: Automated geolocation
+Historic maps are hand-drawn documents subject to paper shrinkage, surveying error, and lithographic distortion; they are not precise geodetic representations. This motivates a non-rigid spatial transformation rather than a simple affine warp. One of the main challenges in historic digitisation is projecting a pixel-based map onto the real-world street network using map projection coordinates. In traditional geolocation, GCPs (Ground Control Points) are required for an accurate transformation. For historic maps these GCPs take the form of intersections, because intersections are uniquely named and identifiable using the data this pipeline has already extracted.
+5.4.1. Name assignment
+The name assignment process uses STRtree spatial indexing to check the relationship between OCR text polygons and road network links. An STRtree groups nearby geometries into nested bounding rectangles, so a query only tests the roads whose rectangles overlap the search area rather than every road on the map. Text bounding boxes are analysed to find both their centre point (centroid) and their main angle. Using a search radius 𝑑search
+, the system finds all road segments near a label.
+From these candidates, roads are ranked using a combined score 𝑆
+ that considers proximity and angular alignment:
+(2)
+𝑆=exp⁡(−
+𝑑2
+2⁢𝜎2
+)×cos⁡(𝛥⁢𝜃)
+Here, 𝑑
+ is the straight-line distance from the text centre to the road, 𝜎
+ is the Gaussian bandwidth controlling distance sensitivity, and 𝛥⁢𝜃
+ is the angular difference between the text and the road. If the text box physically touches the road, the text score is multiplied by 𝛽touch
+. The road with the highest 𝑆
+ receives the name.
+5.4.2. Name propagation algorithm
+The name propagation algorithm uses a probabilistic flow model rather than strict rule-based assignment. Instead of binary decisions, the system assigns a confidence score (0.0 to 1.0) to every name on every road segment.
+The process follows these key principles:
+•
+Angular Momentum: Names flow naturally along straight lines. When a named road enters an intersection, the algorithm calculates the viewing angle to all exiting roads.
+•
+Confidence Decay: As a name travels further from its source label, its confidence decays at rate 𝛼decay
+ per segment. If the road curves, the confidence drops faster based on the cosine of the turning angle.
+•
+Stability (The Overtake Rule): To prevent names from flickering, a new name can only replace an existing one if it is significantly stronger. The new confidence must exceed the current confidence by factor 𝛾overtake
+ to trigger an update.
+The full iterative propagation pseudocode is given in Algorithm 2 (Appendix).
+5.4.3. Post-OCR intersection validation
+High confidence intersection nodes undergo validation against the OpenStreetMap intersection dictionary. The predicted intersection labels are fuzzy-matched against the intersection dictionary to find the most similar entry, producing a confidence score for the quality of the match.
+For every intersection label that achieves a confidence score above 𝜏anchor
+, the graph is updated with the validated name and the intersection node is flagged as an “anchor point”.
+5.4.4. Anchor point identification and pre-processing
+The validated anchor points link pixel coordinates on the historic map to geographic coordinates (latitude/longitude). A spatial filter is first applied to the OSM dataset: a bounding box defining the expected extent of the historic map is constructed manually, and only OSM intersections within it are retained, which reduces the search space and avoids false matches to identically named streets in distant suburbs. Each anchor point is then paired with its matching intersection in the filtered dictionary, giving a set of raw coordinate pairs (𝑃historic
+𝑖,𝑃OSM
+𝑖)
+.
+5.4.5. Coarse alignment and normalisation
+Before outlier detection can be performed, the historic pixel coordinates must be brought into the same domain as the geographic coordinates. A global linear rescaling is applied to the historic points:
+(3)
+𝑃scaled
+𝑖=𝑆⋅𝑃historic
+𝑖+𝑇
+where 𝑆
+ is a scaling factor derived from the coordinate ranges of both datasets, and 𝑇
+ is the translation offset. This coarse alignment ensures that subsequent geometric validation operates on comparable spatial magnitudes.
+5.4.6. Robust outlier detection (RANSAC)
+Text-based matching introduces outliers (e.g., matching “George St” in the CBD to a “George St” in a neighbouring district). To remove erroneous anchors, the pipeline uses RANSAC (Fischler & Bolles, 1981) rather than simple distance filtering.
+RANSAC iteratively estimates a global affine transformation model by selecting random subsets of anchor points. For a set of points, the affine model 𝑀
+ is computed:
+(4)
+⎡
+⎢ ⎢
+⎣
+𝑥osm
+𝑦osm
+1
+⎤
+⎥ ⎥
+⎦
+=
+⎡
+⎢ ⎢
+⎣
+𝑎	𝑏	𝑡𝑥
+𝑐	𝑑	𝑡𝑦
+0	0	1
+⎤
+⎥ ⎥
+⎦
+⋅
+⎡
+⎢ ⎢
+⎣
+𝑥scaled
+𝑦scaled
+1
+⎤
+⎥ ⎥
+⎦
+The algorithm classifies points as inliers if their residual error falls below 𝛿inlier
+:
+(5)
+‖𝑀⁡(𝑃scaled
+𝑖)−𝑃osm
+𝑖‖<𝛿inlier
+This process repeats for 𝑁trials
+ iterations, ultimately selecting the consensus set that maximises the number of inliers. Points classified as outliers are discarded from the final warping stage.
+5.4.7. Non-rigid spatial warping (Thin Plate Spline)
+The final coordinate transformation addresses local distortions in the historic map that cannot be captured by a global affine transform. The pipeline uses a Thin Plate Spline (TPS) deformation (Bookstein, 1989), implemented via a Radial Basis Function (RBF) interpolator.
+The TPS minimises a bending energy function, acting as a flexible sheet constrained by the remaining inlier anchor points. The transformation function 𝑓⁡(𝑥,𝑦)
+ is defined as:
+(6)
+𝑓⁡(𝑥,𝑦)=𝑎0+𝑎1⁢𝑥+𝑎2⁢𝑦+
+𝑁
+∑
+𝑖=1
+𝑤𝑖⁢𝜙⁡(‖(𝑥,𝑦)−𝑃scaled
+𝑖‖)
+where 𝜙⁡(𝑟)=𝑟2⁢log⁡(𝑟)
+ is the fundamental solution to the biharmonic equation.
+A smoothing parameter 𝜆
+ is introduced to relax the interpolation constraints, balancing fidelity with geometric stability:
+(7)
+min⁡
+𝑁
+∑
+𝑖=1
+‖
+osm
+𝑃
+𝑖
+−𝑓⁡(
+scaled
+𝑃
+𝑖
+)‖2+𝜆⁢𝐽⁡(𝑓)
+where 𝐽⁡(𝑓)
+ represents the integral of the second derivatives (bending energy). The resulting transformation is applied to all nodes and links in the historic graph to produce the final geolocated dataset.
+5.4.8. Semi-automatic geolocation
+Name-based anchoring fails when a sheet yields too few validated intersections to constrain a transform, which is the case on most of the smaller atlas sheets. For these sheets the pipeline provides a semi-automatic mode that replaces only the source of the correspondences and leaves the rest of the workflow unchanged.
+An operator places a small number of ground control points on the raster and pairs each with its location in the modern network: between 2 and 13 points on the atlas sheets, 10 on Melbourne 1942 and 61 on the 1903 sheet. The system extends these points by junction matching between the manually digitised historic graph and the modern network, pairing intersections by proximity and connectivity, which gives between 76 and 3717 correspondences per sheet. Because the propagation uses the digitised graph rather than the Stage 1–2 prediction, the predicted network plays no part in its own registration.
+A four-parameter similarity transform (uniform scale, rotation and translation) is fitted to these correspondences by least squares, mapping pixel coordinates (col,−row)
+ to the projected modern coordinate system. A similarity transform is used instead of the affine or TPS models of the automated path because the correspondences are dense and spread across the sheet, so the residual is dominated by the survey and drafting error of the original map rather than by the flexibility of the model. The median residuals are 4.3–14.7 m on the atlas sheets, 17.2 m on Melbourne 1942 and 30.0 m on the 1903 sheet, compared with about 120 m from automated geolocation on the 1903 sheet.
+This mode still requires an operator, but it reduces the task from tracing a network to placing a few points and removes the dependence of Stages 4–5 on OCR quality, which allows the thirteen sheets without enough validated OCR anchors to be carried through to matching.
+5.5. Stage 5: Similarity analysis and network matching
+The final stage performs an alignment between the georeferenced historic road network and the modern OSM graph. Unlike traditional node-matching approaches, this implementation uses a Path Stitching and Geometric Scoring pipeline. This approach prioritises the topology of road segments and accounts for the non-linear distortions present within hand-drawn maps through a multi-pass relaxation strategy.
+5.5.1. Pass 0: Global registration and alignment
+Before individual link matching, a global registration step corrects spatial drifts. The algorithm uses a KD-Tree to probe nearest-neighbour candidates for historic nodes within the contemporary network.
+To filter false positives, RANSAC (Fischler & Bolles, 1981) is used to estimate an affine transformation model that maximises the number of inlier node matches:
+(8)
+𝑇affine=argmax
+𝑀⁢∑
+𝑖𝕀⁡(‖𝑝osm
+𝑖−𝑀⁡(𝑝hist
+𝑖)‖<𝜖)
+where 𝕀
+ is the indicator function and 𝜖
+ is the residual threshold. The resulting transformation is applied to the entire historic graph, minimising global distortion prior to fine-grained matching.
+5.5.2. Candidate selection and path stitching
+Before any matching, the contemporary network is preprocessed. The OSM graph is projected to a metric CRS, its intersections consolidated within a tolerance 𝛿cons
+ (merging junction nodes and rebuilding the graph, dead ends included), and projected back; motorways are then removed, leaving 197,510 drivable edges for the Sydney sheets. Because consolidation only merges junction nodes within 𝛿cons
+, a divided road whose carriageways lie further apart than that survives as two parallel ways, and both remain available as match candidates.
+For each historic link 𝑒ℎ
+, potential contemporary matches are identified using a spatial index (STRtree).
+Candidate hydration.
+The start (𝑢
+) and end (𝑣
+) nodes of the historic link are projected onto nearby OSM segments. These projections form “virtual nodes” that serve as anchor points.
+Path stitching.
+A match candidate is defined as the shortest path between a start candidate 𝑐start
+ and an end candidate 𝑐end
+ within the OSM graph. To optimise performance, pairs are pre-filtered by Euclidean distance: pairs are discarded if the ratio of the Euclidean distance between candidates to the historic link length 𝐿ℎ
+ falls outside [𝜌min
+𝐿,𝜌max
+𝐿]
+:
+(9)
+𝜌min
+𝐿<
+𝑑euc⁡(𝑐start,𝑐end)
+𝐿ℎ
+<𝜌max
+𝐿
+Valid pairs are “stitched” into a LineString geometry using 𝐴∗
+ pathfinding on the weighted OSM graph. 𝐴∗
+ finds the shortest path between two nodes by always expanding the most promising node next, ranked by the distance already travelled plus the straight-line distance still to go; it returns the same path as Dijkstra’s algorithm while exploring far fewer nodes.
+5.5.3. Geometric similarity scoring
+Each stitched candidate path 𝑒cand
+ is evaluated against the historic link 𝑒ℎ
+ using a composite cost function. The scoring model introduces specific penalties for “zig-zag” artefacts and “dog-leg” topology errors common in map matching.
+Shape similarity (Modified Hausdorff).
+Geometric correspondence is measured using the directed Hausdorff distance 𝑑𝐻
+, normalised by link length:
+(10)
+𝑆shape=
+𝑑𝐻⁡(𝑒ℎ,𝑒cand)+𝛽𝐻⋅𝑑𝐻⁡(𝑒cand,𝑒ℎ)
+𝐿ℎ
+Sinuosity penalty.
+To prevent matching straight historic roads to circuitous modern paths, a sinuosity penalty 𝑃sin
+ penalises paths where the network length exceeds the Euclidean distance 𝑑air
+ between endpoints:
+(11)
+𝑃sin=
+⎧
+{ {
+⎨
+{ {
+⎩
+(
+𝐿cand
+𝑑air
+−𝜏sin)×1.5	if
+𝐿cand
+𝑑air
+>𝜏sin
+0	otherwise
+Topology penalty.
+To prevent “dog-leg” matches, internal angles of the candidate geometry are evaluated. If the historic link is straight (low sinuosity), sharp deviations in the match are penalised:
+(12)
+𝑃topo=
+max⁡(𝜃internal)−𝜏dogleg
+180°
+for𝜃internal>𝜏dogleg
+Warp consistency.
+A history of displacement vectors from previous matches is maintained. A warp score 𝑆warp
+ penalises matches that contradict the local drift trend.
+(13)
+𝑆warp=𝑤mag⋅
+∣|
+⃗
+𝑣
+curr|−|
+⃗
+𝑣
+avg|∣
+𝜈drift
++𝑤dir⋅
+1−cos⁡(𝜙)
+2
+where 𝜙
+ is the angle between the current displacement and the running average.
+5.5.4. Composite score and smart relaxation
+Bearing.
+The bearing term compares the end-to-end orientations of the historic link and the candidate path:
+(14)
+𝑆bearing=
+1
+𝜋
+⁢arccos⁡(
+⃗
+𝑣
+ℎ
+‖
+⃗
+𝑣
+ℎ‖
+⋅
+⃗
+𝑣
+cand
+‖
+⃗
+𝑣
+cand‖
+)∈[0,1],
+where 
+⃗
+𝑣
+ joins the first and last vertex of each geometry, so 0 is parallel, 0.5 perpendicular and 1 anti-parallel; a zero-length vector scores 0.5. Beyond 𝜏br
+, that is beyond 90°, a hard penalty 𝑃br=2⁢(𝑆bearing−𝜏br)
+ is added.
+Length gate.
+Candidates outside the length-ratio gate receive an asymmetric penalty, larger below the gate because a match that is too short is the more serious error: 𝑃len=5⁢(𝜌min
+𝐿−𝜌𝐿)
+ below the gate and 0.5⁢(𝜌𝐿−𝜌max
+𝐿)
+ above it.
+The final dissimilarity score 𝒮
+ combines the weighted similarity terms with these two penalties:
+(15)
+𝒮=𝑤sh⁢𝑆shape+𝑤br⁢𝑆bearing+𝑤sin⁢𝑃sin+𝑤top⁢𝑃topo
+⏟_____________⏟_____________⏟
+per-candidate
++𝑃len+𝑃br+𝑤warp⁢𝑆warp
+The warp term is added in a later pass, once a displacement history exists, rather than during candidate scoring.
+The matching process uses a two-pass relaxation strategy:
+•
+Pass 1 (Strict): Search radius is constrained to 𝑅strict
+ to capture high-confidence matches.
+•
+Pass 2 (Relaxed): Rejected links are re-evaluated with radius 𝑅relaxed
+ and looser candidate limits, allowing recovery in distorted areas.
+Matches are categorised into confidence tiers by fixed cut-points on 𝒮
+: High below 𝐶high
+, Medium below 𝐶med
+, Low below 𝐶low
+, Very low below 𝐶vlow
+, and Rejected above it. The results reported here use the High and Medium tiers, so the effective acceptance threshold is 𝒮<𝐶med
+.
+5.6. Evaluation and hyperparameter tuning
+Only the Stage 5 parameters are optimised (Section 5.7). The Stage 3–4 thresholds in Table 1 were set by visual inspection during development on the 1877 sheet, which is not among the maps on which those stages are evaluated (Table 2), and were not tuned further, so they may not be optimal for other sheets.
+5.7. Multi-objective hyperparameter optimisation
+The performance of map matching algorithms is sensitive to the weights assigned to similarity metrics and the search thresholds used. Furthermore, map matching presents a classic multi-objective trade-off: relaxed thresholds often increase Recall (recovering more historic streets) at the expense of Precision (increasing false positives).
+To address this, we used the Optuna framework (Akiba et al., 2019) to perform a multi-objective optimisation using the Non-dominated Sorting Genetic Algorithm II (NSGA-II) (Deb et al., 2002). Rather than optimising for a single scalar metric (such as the F1-score), which can obscure trade-offs, NSGA-II seeks a Pareto Frontier of optimal solutions where no single objective can be improved without degrading another.
+Each trial samples a distinct configuration from the parameter space defined in Table 3.
+
+Table 3. Hyperparameter search space. All weights are normalised such that ∑𝑤𝑖=1
+ before execution.
+
+Category	Parameter	Distribution	Range/Logic
+Similarity weights	𝑤sh
+ (Hausdorff)	Log-Uniform	[0.1,10.0]
+
+	𝑤br
+ (Orientation)	Log-Uniform	[0.1,10.0]
+
+	𝑤warp
+ (Displacement)	Log-Uniform	[0.1,10.0]
+
+	𝑤sin
+ (Zig-Zag Penalty)	Log-Uniform	[0.1,10.0]
+
+	𝑤top
+ (Dog-Leg Penalty)	Log-Uniform	[0.1,10.0]
+
+Search gates	Initial search radius (𝑅
+)	Integer Uniform	[50,400]
+ m
+	Relaxation radius	Derived	𝜅relax⁢𝑅
+
+	Length ratio (Min/Max)	Float Uniform	Min: [0.05,0.25]
+, Max: [4.0,8.0]
+
+Thresholds	Confidence high (𝐶high
+)	Float Uniform	[0.15,0.30]
+
+	Confidence medium (𝐶med
+)	Float Uniform	[0.50,0.70]
+; 𝐶low=𝐶med+0.15
+
+	Search depth	Integer	Max candidates: [15,30]
+, Max paths: [5,10]
+5.8. Evaluation metrics and ground truth
+The primary evaluation compares the pipeline’s High and Medium confidence output against the historic Sydney road network of Turner et al. (2023), which records road segments with opening and closing dates derived from semi-automated georeferencing of historic maps. This reference is more suitable for a 1903 map than raw OSM because it records when roads opened and closed, although it was built on modern street geometry and so only partly separates the historic network from the present one. Melbourne 1942 lies outside that dataset and is evaluated against its manually digitised 1942 network. For each sheet the reference is clipped to the footprint of the full historic graph, so that the recall denominator does not depend on which links a configuration accepts.
+Because the reference omits historic roads that left no modern trace, 1903 roads recovered by the pipeline can be scored as false positives, so the reported precision is a lower bound on true precision. The same omission has the opposite effect on recall: roads missing from the reference do not enter the recall denominator, which is therefore limited to roads that survive into the modern network. These are the roads Stage 5 can return, since its output lies on OSM edges, and a demolished road could not be recovered in any case, so the reported recall is optimistic with respect to the full 1903 network.
+Spatial discrepancies between hand-drawn maps and modern baselines make one-to-one link matching insufficient. Instead, a Buffer-Intersection Method with a spatial tolerance of 𝜏buffer=5
+ metres was used.
+The geometry scored is the set of stitched OSM paths returned by Stage 5, not the warped historic graph. These paths lie on OSM edges, which is why a 5 m tolerance can be applied even though the registration residual is much larger, and the F1 therefore measures whether the pipeline selects the modern edges that correspond to the historic network rather than the positional accuracy of the reconstructed geometry, which is limited by the registration residual.
+Metrics.
+Recall, Precision, and F1-Score were calculated based on the length of matched geometries (𝐿
+). Length-based matching was used over link count-based matching due to the disparity in link density between OSM and the predicted map.
+(16)
+Recall=
+𝐿⁡(Truth∩Buffer𝜏⁢(Pred))
+𝐿⁡(Truth)
+(17)
+Precision=
+𝐿⁡(Pred∩Buffer𝜏⁢(Truth))
+𝐿⁡(Pred)
+(18)
+𝐹1=2⋅
+Precision⋅Recall
+Precision+Recall
+Run-to-run variation.
+The matching stage is not fully deterministic, because 𝑆warp
+ accumulates a running average of displacement vectors whose order varies under parallel execution. Repeating the fourteen-map evaluation with an identical configuration gives paired F1 differences with a median of 0.006 and a maximum of 0.012, and differences smaller than this are not interpreted.
+Computational optimisation.
+Calculating geometric intersections on high-density urban networks is computationally expensive. Several optimisations were implemented to ensure scalability:
+•
+Spatial Indexing: R-tree indexes were used to pre-filter candidate geometries, limiting intersection checks to bounding-box overlaps only.
+•
+Parallel Processing: The workload was partitioned across CPU cores using joblib, processing batches of geometries in parallel.
+•
+Simplified Buffering: Buffers were generated with a reduced resolution (octagonal approximation) and simplified geometry to reduce vertex count without compromising the 𝜏buffer
+ tolerance accuracy.
+6. Results and evaluation
+6.1. Stage 1: U-Net segmentation performance
+The atlas sheets combine high precision (0.740–0.967) with low recall (0.506–0.565 on the held-out sheets and 0.425 on Waterloo, which is training data; Table 4), a pattern that indicates under-segmentation rather than border misclassification. The model was trained on the 1877 John Sands sheet, whose roads are drawn as wide, uniformly filled corridors, while the 1886 atlas sheets draw many streets as narrower or more lightly inked lines, and because pixel recall depends on stroke width the model loses recall on these sheets even where it finds the road. The later stages use the skeletonised centreline, so this loss of pixel recall has little effect on the extracted network.
+Rasterising the predicted graph at increasing stroke widths against the annotated mask, with the geometry unchanged, raises recall from about 0.05 at one pixel to between 0.64 and 0.88 at fifteen pixels while precision stays between 0.79 and 0.96 (Table 5). The centrelines are therefore correctly placed, and the low pixel recall reflects stroke width rather than missed roads.
+
+Table 4. U-Net performance comparison across maps.
+
+Map	Accuracy	Precision	Recall	Dice	IoU
+1877 Map (Training)	0.983	0.876	0.909	0.892	0.805
+1903 Map (Testing)	0.943	0.766	0.971	0.856	0.749
+Enfield 1886 (Testing)	0.941	0.954	0.565	0.710	0.550
+Annandale 1886 (Testing)	0.813	0.967	0.534	0.688	0.524
+Macdonaldtown 1886 (Testing)	0.900	0.740	0.506	0.601	0.430
+Waterloo 1886 (Training)	0.926	0.960	0.425	0.589	0.418
+Melbourne 1942 (Testing)	0.965	0.832	0.849	0.840	0.725
+Fig. 6 compares the U-Net prediction for the Waterloo sheet with its annotated road mask, and Fig. 7 compares the graph derived from that prediction with the manually digitised graph. The prediction contains noise from the map borders and floating text (Fig. 6(a)), which lowers the pixel scores but is removed by the Stage 2 component filtering without loss of the road network (Fig. 7(a)).
+
+Table 5. Width sensitivity of pixel recall. The predicted graph is rasterised at increasing stroke widths against the annotated mask; the geometry is identical in every row and only the rendering width changes.
+
+Stroke width	Annandale	Waterloo	Macdonaldtown
+
+Empty Cell
+	Recall	Prec.	Recall	Prec.	Recall	Prec.
+1 px	0.042	0.964	0.064	0.962	0.049	0.947
+5 px	0.300	0.951	0.439	0.943	0.357	0.941
+9 px	0.457	0.920	0.661	0.896	0.560	0.923
+11 px	0.520	0.902	0.742	0.867	0.636	0.908
+15 px	0.641	0.854	0.875	0.789	0.778	0.849
+Download: Download high-res image (421KB)
+Download: Download full-size image
+
+Fig. 6. Comparison between the Waterloo atlas-sheet road prediction and the manually annotated pixel-level ground truth.
+
+State Library of NSW atlas sheet.
+Download: Download high-res image (302KB)
+Download: Download full-size image
+
+Fig. 7. Waterloo atlas sheet after post-processing: the graph derived from the prediction against the manual graph ground truth.
+
+State Library of NSW atlas sheet.
+6.2. Stage 2: Graph construction performance
+Table 6 presents the graph construction performance evaluated against the manually digitised ground truth graphs.
+The 1877 map achieves a recall of 0.909, indicating that the graph tracing and post-processing pipeline successfully recovers the large majority of road connections from the skeletonised prediction. The lower precision of 0.677 reflects the noisier content of the CBD training map, where dense road layouts and text overlay produce spurious graph components that survive post-processing filtering.
+
+Table 6. Graph construction performance across maps.
+
+Map	Precision	Recall	F1
+1877 Map (Training)	0.677	0.909	0.776
+Enfield 1886 (Testing)	0.868	0.891	0.879
+Annandale 1886 (Testing)	0.877	0.844	0.860
+Macdonaldtown 1886 (Testing)	0.850	0.917	0.882
+Waterloo 1886 (Training)	0.931	0.893	0.912
+Melbourne 1942 (Testing)	0.831	0.827	0.829
+The atlas sheets reach higher precision and F1 than the 1877 map, with F1 of 0.860 to 0.882 on the three held-out sheets; Waterloo reaches 0.912 but contributed training data at this stage, so it is reported for completeness rather than as evidence of generalisation. The difference from 1877 is likely due to the more clearly defined road boundaries on the atlas sheets, and the map borders that Stage 1 misclassifies as roads are removed by component filtering. Annandale has the lowest recall (0.844), consistent with its lower U-Net performance in Table 4, and Melbourne 1942 has a lower F1 of 0.829, which suggests that graph construction is more affected than segmentation by the change to a different city and map style.
+6.3. Stage 3: OCR and text detection
+Fig. 8 shows the DBNet++ model’s generalisation across maps. The polygons are well formed around the majority of the text present, with errors occurring around large text, text that is too small, or text that crosses over artefacts within the map.
+Table 7 reports OCR extraction and name propagation performance for the 1903 sheet and the three suburb sheets, all of which completed Stage 3, although the propagated labels were uneven at the intersection level.
+Download: Download high-res image (2MB)
+Download: Download full-size image
+
+Fig. 8. Examples of DBNet++ text-detection polygons overlaid on two atlas sheets, showing the localisation of candidate street labels.
+
+State Library of NSW atlas sheets.
+
+Table 7. OCR and name propagation performance across maps.
+
+Map	Seed links (%)	Named nodes (%)	Named links (%)	Unique names	Median confidence
+1903 Sydney (Testing)	7021 (27.7%)	15,950 (94.5%)	22,108 (87.5%)	2105	0.79
+Annandale 1886 (Testing)	64 (18.0%)	253 (94.4%)	331 (93.0%)	16	0.68
+Macdonaldtown 1886 (Testing)	82 (29.0%)	216 (96.9%)	266 (94.0%)	14	0.74
+Waterloo 1886 (Testing)	71 (23.5%)	231 (99.6%)	300 (99.3%)	88	0.73
+6.3.1. OCR text detection and initial assignment
+On the 1903 Sydney map, the original OCR run detected and processed 27,856 text elements, resulting in initial name assignments representing 27.7% of the total network links. Across the smaller suburb sheets, the Stage 3 results show that name propagation still covered most nodes and links despite much lower seed-link counts, indicating that the propagation stage remained functional even when the underlying OCR evidence was sparse.
+6.3.2. OCR recognition accuracy
+The coverage and confidence figures in Table 7 show how far labels propagate but not whether they are read correctly, so the fine-tuned TrOCR model was also evaluated on 192 held-out labelled crops (Table 8).
+About two labels in five are misread even when case is ignored, and much of the case-sensitive error is systematic, because the model tends to return upper case, so that Albert is returned as ALBER. Recognition error does not translate directly into anchor loss, however, because the fuzzy match against the OSM dictionary recovers some misread labels; ALBER, for example, still matches Albert above threshold.
+
+Table 8. TrOCR recognition accuracy on 192 held-out labelled crops.
+
+Empty Cell
+	CER	WER	Exact match
+Case-sensitive	0.431	0.608	0.391
+Case-insensitive	0.226	0.438	0.562
+6.3.3. Post-OCR intersection validation results
+In the re-run of Stages 3–4 on the 1903 sheet (Table 9), every crop returns a string, and the largest loss occurs at the dictionary match, where 51.9% of recognised strings match no entry above threshold. Together with Table 8, this indicates that the model often produces a string close to the correct name but not close enough to pass the threshold.
+
+Table 9. Anchor attrition on the 1903 sheet. Counts are from a re-run of Stages 3–4, which gives 20,661 text detections and 18 RANSAC inliers; the original run reported 27,856 detections and 33 inliers.
+
+Stage	Retained	Dominant loss
+Text detections	20,661	–
+OCR attempted	20,661	–
+Non-empty recognised strings	20,661	
+Matched to the OSM dictionary	9,937	10,724 lost (51.9%)
+ Verified outright	742	
+ Corrected to a dictionary entry	7,844	
+ Matched on suffix only	1,351	
+Named links after propagation	9,976	of 11,826 edges (84.4%); median confidence 0.795
+RANSAC inliers	18	Geometric inconsistency; 13–20 across draws
+6.4. Stage 4: Geolocation and coordinate transformation results
+Automated geolocation requires at least three non-collinear anchors for an affine fit, and enough anchors spread across the sheet to constrain the TPS warp. Because of their limited extent and accumulated propagation error, the smaller atlas sheets complete OCR and name propagation but retain too few usable anchors, with three of 216 candidate intersections on Annandale, three of 308 on Macdonaldtown and none of 231 on Waterloo, against 33 of 441 on the 1903 sheet. The 1903 sheet, which covers inner Sydney with a dense and well-labelled network, is therefore the only sheet evaluated with fully automated geolocation, and the other sheets use the semi-automatic mode of Section 5.4.8.
+6.4.1. Anchor point processing pipeline
+The initial extraction process yielded 441 potential intersection points.
+•
+Geographic Filtering: A boundary validation step removed gross outliers, retaining 415 validated intersections within the target geographic area.
+•
+Anchor Point Distribution: The candidate anchors are spread across the map (Fig. 9a), which limits geometric distortion in the transformation.
+RANSAC retains 33 inliers (Fig. 9b), whose convex hull is wide enough to constrain the TPS warp while the noisiest OCR matches are excluded. Varying the inlier threshold from 0.0025 to 0.04 changes the median F1 at a 50 m buffer by 0.03 across three RANSAC draws, so the rejection rate reflects the configured threshold rather than the quality of the anchors.
+Download: Download high-res image (564KB)
+Download: Download full-size image
+
+Fig. 9. Anchor points before and after RANSAC filtering in the original automated run. (a) Candidate anchors from validated intersection names. (b) Green points are retained inliers used for the transformation, red points rejected outliers.
+
+6.4.2. Network transformation validation
+Following the isolation of the 33 inlier anchor points, an initial affine transformation was calculated to globally align the historic map with modern coordinates. The subsequent non-linear TPS warping reduced the mean error from 2634 m to 120 m and the maximum error from 4143 m to 252 m. This accuracy is acceptable given the inherent geometric limitations of 19th-century hand-drawn cartography noted in Section 5.
+In the re-run on the 18-inlier anchor set of Table 9, the coarse alignment of Section 5.4.5 alone leaves a mean error of 1286 m, a least-squares affine fit 113 m and the TPS warp 103 m, with maxima of 2533 m, 315 m and 292 m. Most of the reduction therefore comes from the affine fit rather than the TPS warp, and the 2634 m starting error of the original run is closer in magnitude to the coarse alignment stage than to an affine fit.
+6.5. Stage 5: Similarity matching
+The Stage 5 parameters were selected with the NSGA-II search of Section 5.7, using 220 trials to explore the trade-off between recall and precision. Under fully automated geolocation with the original Stage 5 configuration, Stage 5 processed 21,103 historic links on the 1903 sheet, accepted 20,304 and traversed 24,093 OSM links, for an F1 of 0.668 against (Turner et al., 2023).
+6.5.1. Pareto frontier analysis
+The best recall found rises from 0.550 in the opening trials to 0.576 by trial 52, and the remaining 168 trials add less than 0.001, which is within the run-to-run variation of the matcher (Section 5.8); the plateau therefore reflects the resolution of the search as much as a fully explored parameter space. The Pareto frontier in Fig. 10 shows the inverse relationship between recall and precision:
+•
+High-precision extreme: configurations at the top-left of the frontier reach precision above 0.80 at recall below 0.30 by matching only the main streets and rejecting historic roads that are distorted; the extreme member reaches precision 0.811 at recall 0.297, an F1 of 0.435.
+•
+Selected operating point: the operating point is the F1 maximum of the non-dominated set. F1 rises monotonically towards the high-recall end of this frontier, so the maximum is the frontier’s highest-recall member (trial 151), at recall 0.576, precision 0.739 and F1 0.648.
+The parameters of the selected configuration, which is used for all matching results that follow, are given in Table 10.
+Download: Download high-res image (286KB)
+Download: Download full-size image
+
+Fig. 10. Pareto frontier for the NSGA-II search, showing the trade-off between recall (horizontal) and precision (vertical). Non-dominated members are marked; dashed contours are lines of constant F1, so any two configurations can be compared directly. The selected operating point is the F1 maximum of the frontier, at recall 0.576 and precision 0.739.
+
+Table 10. Selected operating point: the F1 maximum of the Pareto frontier in Fig. 10. Weights are the sampled values normalised to sum to one.
+
+Parameter	Value
+𝑤sh
+ (shape)	0.143
+𝑤br
+ (bearing)	0.687
+𝑤warp
+ (displacement)	0.061
+𝑤sin
+ (sinuosity)	0.092
+𝑤top
+ (topology)	0.018
+Initial search radius	50 m
+Length-ratio gate	[0.172,7.637]
+
+𝐶high
+/𝐶med
+	0.214/0.528
+6.5.2. Final matching results
+Table 11 gives the Stage 5 results for the fourteen maps at the operating point of Section 6.5.1, with the Sydney maps evaluated against (Turner et al., 2023) clipped to each map’s footprint and Melbourne 1942 against its manually digitised 1942 network. All fourteen maps use semi-automatic geolocation, and the 1903 sheet is also reported under fully automated geolocation. F1 ranges from 0.573 to 0.724 on the twelve atlas sheets, with a mean of 0.649, while Melbourne scores 0.170 for the reasons given in Section 6.5.3, which concern the reference rather than the sheet.
+The weights in Table 10 were selected on the 1903 sheet alone, so all fourteen maps were also run with the default weights, with geolocation, reference and evaluation unchanged so that the weights were the only difference. The selected configuration improves F1 on all fourteen maps, by 0.016 to 0.084 (mean ＋0.048, median ＋0.044), and each improvement is larger than the 0.012 maximum run-to-run difference given in Section 5.8. The gain comes almost entirely from recall (mean ＋0.064) at a small cost in precision (mean −0.013), with recall rising from 0.412 to 0.514 on Paddington, from 0.514 to 0.608 on Enfield and from 0.411 to 0.503 on Macdonaldtown.
+
+Table 11. Stage 5 matching performance on all evaluated maps. All rows except the last come from a single run at the selected operating point with semi-automatic geolocation; the last row reports the 1903 sheet under fully automated geolocation with the original Stage 5 configuration.
+
+Map	Links	Accepted	Recall	Precision	F1
+St Peters	256	245	0.607	0.897	0.724
+Enfield	354	350	0.608	0.865	0.714
+Drummoyne	192	186	0.575	0.832	0.680
+Strathfield 1889	265	263	0.565	0.821	0.669
+The Glebe	595	591	0.539	0.835	0.655
+Paddington	563	551	0.514	0.874	0.647
+Annandale	442	436	0.541	0.790	0.642
+Macdonaldtown	283	278	0.503	0.874	0.638
+Waterloo	302	299	0.519	0.823	0.637
+Alexandria	433	428	0.511	0.822	0.630
+Redfern	489	484	0.443	0.854	0.584
+Camperdown	356	348	0.434	0.842	0.573
+Melbourne 1942	6,240	3,271	0.114	0.329	0.170
+Sydney 1903 (semi-automatic)	18,204	17,615	0.591	0.725	0.651
+Sydney 1903 (fully automated)	21,103	20,304	0.662	0.674	0.668
+6.5.3. What the matching scores measure
+Precision and recall against the reference do not separate a historic road that has a modern counterpart but was not matched from a historic road with no modern counterpart to match. Table 12 separates the two by classifying every historic link by whether a modern road lies within 30 m and whether the pipeline matched it.
+Conditional recall lies between 0.956 and 0.984 on every map and is 0.974 overall, with 19,163 of the 19,668 historic links within 30 m of a modern road matched. It changes by less than 0.001 when the tolerance is reduced from 30 m to 15 m, while the share of links within tolerance on the 1903 sheet falls from 0.694 to 0.313, so the F1 scores in Table 11 depend mainly on how much of each historic network has a modern counterpart rather than on the matcher.
+
+Table 12. Every historic link classified by proximity to a modern road and by match outcome. A: within 30 m and matched. B: within 30 m and missed. C: outside 30 m but matched. D: outside 30 m and not matched. Conditional recall 𝐴/(𝐴+𝐵)
+ measures the matcher separately from how much of the historic network has a modern counterpart.
+
+Map	A	B	C	D	Within 30 m	𝐴/(𝐴+𝐵)
+
+Strathfield 1889	251	4	10	2	0.955	0.984
+Enfield	328	7	20	0	0.944	0.979
+The Glebe	545	13	37	0	0.938	0.977
+Waterloo	274	5	21	2	0.924	0.982
+Macdonaldtown	252	9	22	0	0.922	0.966
+Paddington	494	21	45	3	0.915	0.959
+Camperdown	309	13	34	0	0.904	0.960
+St Peters	222	9	21	4	0.902	0.961
+Drummoyne	167	6	18	1	0.901	0.965
+Redfern	419	13	59	1	0.878	0.970
+Alexandria	369	10	53	1	0.875	0.974
+Annandale	373	17	54	3	0.872	0.956
+Sydney 1903	12,319	324	5045	535	0.694	0.974
+Melbourne 1942	2,841	54	389	2956	0.464	0.981
+All fourteen	19,163	505	5828	3508	0.678	0.974
+Melbourne combines an F1 of 0.170 with a conditional recall of 0.981 because less than half of its 1942 links (0.464) lie within 30 m of a modern road, so its low F1 reflects the loss of the 1942 network rather than a failure of the matcher.
+Fig. 11 overlays the matched OSM links (blue) and the transformed 1903 network (orange) on the Sydney network. The roads that fall outside the matching tolerance show the residual registration error, which is 120 m (mean) under fully automated geolocation and 30.0 m (median) with semi-automatic control points.
+Download: Download high-res image (1MB)
+Download: Download full-size image
+
+Fig. 11. Overlay of the transformed 1903 historic network (orange) and the matched OSM links (blue), illustrating areas of agreement and residual spatial mismatch.
+
+7. Discussion and conclusion
+7.1. Semantic anchoring for automated geolocation
+Manual ground control points and visual feature matching both depend on finding the same features on the historic and modern maps, which becomes harder as urban form diverges, whereas street names read by OCR identify intersections directly. On the 1903 sheet RANSAC retained 33 of the 415 candidate anchors, which shows that OCR-based name matching remains noisy, although the retained anchors were enough to register the sheet with a mean error of 120 m.
+7.2. Segmentation robustness and generalisation
+The U-Net’s recall of 0.971 on the 1903 sheet (Table 4) shows that it still finds the roads on a map drawn 26 years after its training sheet, and the graph F1 of 0.860 to 0.882 on the held-out atlas sheets (Table 6) shows that Stage 2 holds on a different map series. Melbourne 1942 extends both results to a second city, and the semi-automatic geolocation of Section 5.4.8 carries it through Stages 4–5; the name-based anchoring of Stage 4 has been tested only on Sydney.
+The U-Net’s precision falls from 0.876 on the 1877 sheet to 0.766 on the 1903 sheet, so the transfer still depends on map style. Changes in lithography, degradation and symbols lead the model to over-predict road-like features, and the 1877 training data therefore support partial transfer between styles but not the robustness needed for mixed historic collections.
+7.3. Network matching and historic divergence
+The F1 scores of 0.573 to 0.724 on the Sydney atlas sheets and 0.651 on the 1903 sheet (Table 11) are not classification accuracy against a complete 1903 network, because the Turner et al. (2023) reference contains only historic roads with a modern counterpart; as set out in Section 5.8, the reported precision is therefore a lower bound and the reported recall is optimistic. The Pareto frontier in Fig. 10 shows the cost of stricter geometric criteria, which raise precision by rejecting roads that are correct but distorted by nineteenth-century surveying and map production.
+The conditional recall of 0.974 in the four-cell classification of Section 6.5.3 shows that the matcher finds almost every historic link with a modern road nearby, but the classification measures proximity rather than survival: in a dense grid a modern road is almost always nearby, and showing that an individual road survived would require name matching or topological correspondence.
+7.4. Computing requirements and time
+The pipeline runs on consumer hardware, with OCR accounting for most of the runtime. On an M4 Max MacBook Pro with 36 GB of memory, road extraction, vectorisation and text detection take under 30 s on the suburb sheets. On the 1903 sheet, the largest in the study at 23,348×35,346
+ pixels, a full Stages 1–4 run took 10.6 h, of which OCR took 9.5 h for 20,661 detected text elements, text detection 6.6 min and geolocation 76 s. OCR therefore takes more than eight times as long as the rest of the pipeline combined and is the stage that limits city-scale processing, while the suburb sheets, with one to two orders of magnitude fewer text elements, complete in minutes.
+7.5. Limitations
+The main limitation of the current pipeline is not segmentation or graph extraction, but automated geolocation. Stable registration depends on obtaining enough correctly detected and recognised named intersections, which in turn depends on OCR quality and on the persistence of comparable street structure in the contemporary reference network. Large maps can absorb OCR noise through anchor abundance; smaller maps often cannot.
+On the suburb sheets, which retained too few validated anchors for automated registration (Section 6.4), Stage 5 under fully automated geolocation accepted 6 of 405 links on Annandale and none on Macdonaldtown or Waterloo. The semi-automatic mode of Section 5.4.8 addresses this limitation: with seven control points, the Macdonaldtown graph that produced no accepted links yields 278 accepted links at F1 0.638, which shows that the failure on this sheet was in geolocation rather than matching, and that where few anchors can be validated a small amount of manual input recovers the sheet while keeping most of the labour saving of the pipeline.
+In dense urban areas such as the Sydney CBD, where roads, labels and linework are tightly packed, segmentation and graph construction errors compound, because merged road predictions arise where road boundaries cannot be separated and skeletonisation carries these errors into the graph topology.
+Performance is also likely to decline on maps with different road symbology, heavier text overlay, unconventional orientation or more severe damage, so the pipeline should be regarded as reliable within the range of map styles tested here rather than across historic cartography in general.
+7.6. Future research directions
+Three priorities follow directly from these results. The first is improvement in OCR and text validation, since semantic anchoring is currently the main constraint on automated geolocation; this includes the street dictionary, because a street renamed since the map was drawn loses its anchor in the same way as a misread label, and period gazetteers such as the street indexes in the John Sands directories could supply the historic names that a modern dictionary lacks. The second is stronger robustness to domain shift through broader training data and style-aware augmentation across multiple cartographic sources. The third is extension to additional map series and cities, so that the present pipeline can be tested at larger historical and geographic scales. A separate line of future work is the application of these reconstructed networks to longitudinal urban-network analysis, which is beyond the scope of the present paper and will be developed separately.
+The same framework could also be extended beyond transport networks. Building footprints, land-use boundaries, and other topographic features would not only broaden the historical information recoverable from scanned maps, but may also improve geolocation and interpretation by providing additional semantic and geometric constraints.
+7.7. Conclusion
+Historic street maps can therefore be treated as analysable network sources rather than as purely visual historical artefacts. By combining deep learning segmentation, graph construction, OCR-based semantic anchoring, and similarity-based matching in a unified workflow, the present study shows that georeferenced road graphs can be recovered from scanned historic maps with limited manual intervention, with fourteen maps from two cities and three map series carried through to matched networks using between 2 and 61 manually placed control points per map.
+CRediT authorship contribution statement
+Ethan Yin: Writing – review & editing, Writing – original draft, Visualization, Validation, Supervision, Software, Resources, Project administration, Methodology, Investigation, Formal analysis, Data curation, Conceptualization. David Levinson: Writing – review & editing, Supervision, Resources, Conceptualization.
+Declaration of Generative AI and AI-assisted technologies in the writing process
+During the preparation of this work the authors used Anthropic’s Claude Code and OpenAI’s Codex to assist with code development and with drafting and editing text. After using these tools the authors reviewed, evaluated and rewrote all generated code and text at every stage of the research, and take full responsibility for the content of the published article.
+Funding
+This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+Declaration of competing interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Appendix. Name propagation algorithms
+See Algorithm 2.
+Download: Download high-res image (279KB)
+Download: Download full-size image
+Data availability
+The following materials are publicly released to support reproducibility:
+•
+ Pipeline code: The complete Python implementation of all five stages, including preprocessing, U-Net inference, graph construction, OCR integration, geolocation, and similarity matching, is available at https://github.com/EthanY-Maps/PHANTASM.
+•
+ Trained weights: Pre-trained U-Net segmentation weights (trained on the 1877 John Sands map) and the fine-tuned TrOCR OCR recognition model weights are included in the repository.
+•
+ Processed outputs: The final geolocated GeoJSON graph datasets for all fourteen maps carried through Stages 4–5, the 1903 Sydney sheet, twelve Sydney atlas sheets and Melbourne 1942, are released alongside the code, together with the control-point files that define each map’s georeferencing and the per-link match classifications underlying Table 12.
+•
+ Ground truth annotations: The manually digitised 1877 ground truth road graph and pixel-level segmentation masks for all training and evaluation maps are included, along with the 192 labelled text crops used for the OCR accuracy evaluation in Table 8.
+References
+Akiba et al., 2019
+Akiba, T., Sano, S., Yanase, T., Ohta, T., & Koyama, M. (2019). Optuna: A next-generation hyperparameter optimization framework. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining (pp. 2623–2631).
+Google Scholar
+Avcı et al., 2022
+C. Avcı, E. Sertel, M.E. Kabadayı
+Deep learning-based road extraction from historical maps
+IEEE Geoscience and Remote Sensing Letters, 19 (2022), pp. 1-5
+CrossrefGoogle Scholar
+Barthélemy, 2011
+M. Barthélemy
+Spatial networks
+Physics Reports, 499 (1–3) (2011), pp. 1-101
+View PDF
+View articleView in ScopusGoogle Scholar
+Barthélemy et al., 2013
+M. Barthélemy, P. Bordin, H. Berestycki, M. Gribaudi
+Self-organization versus top-down planning in the evolution of a city
+Scientific Reports, 3 (2013), p. 2153
+View in ScopusGoogle Scholar
+Boeing, 2025
+G. Boeing
+Modeling and analyzing urban networks and amenities with OSMnx
+Geographical Analysis, 57 (4) (2025), pp. 567-577
+View in ScopusGoogle Scholar
+Bookstein, 1989
+F.L. Bookstein
+Principal warps: Thin-plate splines and the decomposition of deformations
+IEEE Transactions on Pattern Analysis and Machine Intelligence, 11 (6) (1989), pp. 567-585
+View in ScopusGoogle Scholar
+Bradski, 2000
+G. Bradski
+The OpenCV library
+Dr. Dobb’s Journal of Software Tools (2000)
+Google Scholar
+Buslaev et al., 2020
+A. Buslaev, V.I. Iglovikov, E. Khvedchenya, A. Parinov, M. Druzhinin, A.A. Kalinin
+Albumentations: Fast and flexible image augmentations
+Information, 11 (2) (2020), p. 125
+CrossrefView in ScopusGoogle Scholar
+Chen et al., 2024
+Y. Chen, J. Chazalon, E. Carlinet, M. Ôn Vũ Ngoc, C. Mallet, J. Perret
+Automatic vectorization of historical maps: A benchmark
+PLoS One, 19 (2) (2024), Article e0298217
+CrossrefView in ScopusGoogle Scholar
+Chiang et al., 2020
+Y.-Y. Chiang, W. Duan, S. Leyk, J.H. Uhl, C.A. Knoblock
+Using historical maps in scientific studies: applications, challenges, and best practices, SpringerBriefs in Geography, Springer International Publishing (2020)
+Google Scholar
+Deb et al., 2002
+K. Deb, A. Pratap, S. Agarwal, T. Meyarivan
+A fast and elitist multiobjective genetic algorithm: NSGA-II
+IEEE Transactions on Evolutionary Computation, 6 (2) (2002), pp. 182-197
+View in ScopusGoogle Scholar
+Douglas and Peucker, 1973
+D.H. Douglas, T.K. Peucker
+Algorithms for the reduction of the number of points required to represent a digitized line or its caricature
+Cartographica: The International Journal for Geographic Information and Geovisualization, 10 (2) (1973), pp. 112-122
+Google Scholar
+Fischler and Bolles, 1981
+M.A. Fischler, R.C. Bolles
+Random sample consensus: A paradigm for model fitting with applications to image analysis and automated cartography
+Communications of the ACM, 24 (6) (1981), pp. 381-395
+View in ScopusGoogle Scholar
+Fujitake, 2023
+M. Fujitake
+DTrOCR: Decoder only transformer for optical character recognition
+(2023)
+arXiv preprint arXiv:2308.15996
+Google Scholar
+Hao et al., 2022
+Y. Hao, Y. Liu, Y. Chen, L. Han, J. Peng, S. Tang, G. Chen, Z. Wu, Z. Chen, B. Lai
+EISeg: An efficient interactive segmentation tool based on PaddlePaddle
+(2022)
+arXiv preprint arXiv:2210.08788
+Google Scholar
+Jiang and Claramunt, 2004
+B. Jiang, C. Claramunt
+Topological analysis of urban street networks
+Environment and Planning B: Planning and Design, 31 (1) (2004), pp. 151-162
+View in ScopusGoogle Scholar
+Jiao et al., 2021
+C. Jiao, M. Heitzler, L. Hurni
+A survey of road feature extraction methods from raster maps
+Transactions in GIS, 25 (6) (2021), pp. 2734-2763
+CrossrefView in ScopusGoogle Scholar
+Jiao et al., 2024
+C. Jiao, M. Heitzler, L. Hurni
+A novel framework for road vectorization and classification from historical maps based on deep learning and symbol painting
+Computers, Environment and Urban Systems, 108 (2024), Article 102060
+View PDF
+View articleView in ScopusGoogle Scholar
+John Sands (Firm), 1877
+John Sands (Firm)
+Sands’ six mile circuit map of the city and suburbs of Sydney 1876–77
+(1877)
+Google Scholar
+John Sands (Firm), 1903
+John Sands (Firm)
+City of Sydney and the adjacent municipalities [cartographic material]. via national library of Australia
+(1903)
+Google Scholar
+Kim et al., 2023
+J. Kim, Z. Li, Y. Lin, M. Namgung, L. Jang, Y.Y. Chiang
+The MapKurator system: A complete pipeline for extracting and linking text from historical maps
+Proceedings of the 31st ACM international conference on advances in geographic information systems, Association for Computing Machinery, New York, NY, USA (2023), pp. 1-4
+Google Scholar
+Kingma and Ba, 2017
+D.P. Kingma, J. Ba
+Adam: A method for stochastic optimization
+(2017)
+Google Scholar
+Li et al., 2024
+Z. Li, Y. Lin, Y.-Y. Chiang, J. Weinman, S. Tual, J. Chazalon, J. Perret, B. Duménieu, N. Abadie
+ICDAR 2024 competition on historical map text detection, recognition, and linking
+Document analysis and recognition – ICDAR 2024: 18th international conference, Athens, Greece, August 30–September 4, 2024, proceedings, part VI, Springer-Verlag, Berlin, Heidelberg (2024), pp. 363-380
+Google Scholar
+M. Li et al., 2021
+M. Li, T. Lv, J. Chen, L. Cui, Y. Lu, D. Florencio, C. Zhang, Z. Li, F. Wei
+TrOCR: Transformer-based optical character recognition with pre-trained models
+(2021)
+arXiv preprint arXiv:2109.10282
+Google Scholar
+Z. Li et al., 2021
+Li, Z., et al. (2021). Synthetic map generation to provide unlimited training data for historical map text detection. In Proceedings of the 4th ACM SIGSPATIAL international workshop on AI for geographic knowledge discovery (pp. 17–26).
+Google Scholar
+Liao et al., 2022
+M. Liao, Z. Zou, Z. Wan, C. Yao, X. Bai
+Real-time scene text detection with differentiable binarization and adaptive scale fusion
+(2022)
+Google Scholar
+Lin and Chiang, 2024
+Lin, Y., & Chiang, Y. Y. (2024). Hyper local deformable transformers for text spotting on historical maps. In Proceedings of the 30th ACM SIGKDD conference on knowledge discovery and data mining (pp. 5387–5397).
+Google Scholar
+Masucci et al., 2013
+A.P. Masucci, K. Stanilov, M. Batty
+Limited urban growth: London’s street network dynamics since the 18th century
+PLoS One, 8 (8) (2013), Article e69469
+CrossrefView in ScopusGoogle Scholar
+Patel et al., 2022
+M.J. Patel, A.M. Kothari, H.P. Koringa
+A novel approach for semantic segmentation of automatic road network extractions from remote sensing images by modified UNet
+Radioelectronic and Computer Systems (3) (2022), pp. 161-173
+CrossrefView in ScopusGoogle Scholar
+Ray et al., 2019
+A. Ray, A.R. Chowdhury, Y. Fung, J. Weinman, E. Learned-Miller
+Tight coupling of character, word, and place recognition for end-to-end text recognition in maps: Technical Report UM-CS-2019-003, College of Information and Computer Sciences, University of Massachusetts Amherst (2019)
+Google Scholar
+Ronneberger et al., 2015
+O. Ronneberger, P. Fischer, T. Brox
+U-Net: convolutional networks for biomedical image segmentation
+Medical image computing and computer-assisted intervention – MICCAI 2015, Lecture notes in computer science, vol. 9351, Springer, Cham (2015), pp. 234-241
+CrossrefGoogle Scholar
+Saeedimoghaddam and Stepinski, 2020
+M. Saeedimoghaddam, T.F. Stepinski
+Automatic extraction of road intersection points from USGS historical map series using deep convolutional neural networks
+International Journal of Geographical Information Science, 34 (5) (2020), pp. 947-968
+CrossrefView in ScopusGoogle Scholar
+Schlegel, 2021
+I. Schlegel
+Automated extraction of labels from large scale historical maps
+AGILE: GIScience Series, 2 (2021), pp. 1-14
+CrossrefGoogle Scholar
+Strano et al., 2012
+E. Strano, V. Nicosia, V. Latora, S. Porta, M. Barthélemy
+Elementary processes governing the evolution of road networks
+Scientific Reports, 2 (2012), p. 296
+View in ScopusGoogle Scholar
+Turner et al., 2023
+H. Turner, B. Lahoorpoor, D.M. Levinson
+Creating a dataset of historic roads in Sydney from scanned maps
+Scientific Data, 10 (2023), p. 683
+View in ScopusGoogle Scholar
+Uhl et al., 2022
+J.H. Uhl, S. Leyk, Y.-Y. Chiang, C.A. Knoblock
+Towards the automated large-scale reconstruction of past road networks from historical maps
+Computers, Environment and Urban Systems, 94 (2022), Article 101794
+View PDF
+View articleView in ScopusGoogle Scholar
+van der Walt et al., 2014
+S. van der Walt, J.L. Schönberger, J. Nunez-Iglesias, F. Boulogne, J.D. Warner, N. Yager, E. Gouillart, T. Yu, the scikit-image contributors
+Scikit-image: image processing in Python
+PeerJ, 2 (2014), Article e453
+CrossrefView in ScopusGoogle Scholar
+Wang et al., 2023
+R. Wang, M. Cai, Z. Xia, Z. Zhou
+Remote sensing image road segmentation method integrating CNN transformer and UNet
+IEEE Access, 11 (2023), pp. 144446-144455
+CrossrefView in ScopusGoogle Scholar
+Weinman et al., 2019
+J. Weinman, Z. Chen, B. Gafford, N. Gifford, A. Lamsal, L. Niehus-Staab
+Deep neural networks for text detection and recognition in historical maps
+2019 international conference on document analysis and recognition, IEEE, Sydney, Australia (2019), pp. 902-909
+CrossrefView in ScopusGoogle Scholar
+Wilson, 2012
+A. Wilson
+Atlas of the suburbs of Sydney
+Dictionary of Sydney (2012)
+(Accessed 26 February 2026)
+Google Scholar
+Recommended articles
+No articles found.
+© 2026 The Authors. Published by Elsevier Ltd.
