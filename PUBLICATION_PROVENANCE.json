@@ -5,7 +5,7 @@
     "Ethan Yin",
     "David Levinson"
   ],
-  "version": "Published Version of Record, HTML capture; publisher PDF download unavailable",
+  "version": "Published Version of Record: publisher PDF, complete HTML and figure images",
   "journal": "Computers, Environment and Urban Systems",
   "volume": "132",
   "article_number": "102558",
@@ -23,5 +23,15 @@
     "references": 40,
     "ending_verified": "Wilson (2012), Atlas of the suburbs of Sydney; accessed 26 February 2026; publisher copyright ending present."
   },
-  "transformations": "publisher-main.html is the complete unmodified main DOM capture. PHANTASM-published.html adds a document wrapper, source/licence note and basic layout CSS, and rewrites the 13 article image src values to local copies. article-text.txt is the publisher-rendered text. All figures/tables, appendix algorithms, availability statement and references are retained. Exact publisher MathJax typography was not recreated."
+  "transformations": "publisher-main.html is the complete unmodified main DOM capture. PHANTASM-published.html adds a document wrapper, source/licence note and basic layout CSS, and rewrites the 13 article image src values to local copies. article-text.txt is the publisher-rendered text. All figures/tables, appendix algorithms, availability statement and references are retained. Exact publisher MathJax typography was not recreated.",
+  "publisher_pdf": {
+    "path": "paper/PHANTASM-published.pdf",
+    "source": "Publisher PDF supplied by David on the Desktop, 25 November 2026",
+    "filed_on": "2026-11-25",
+    "pages": 19,
+    "bytes": 6081253,
+    "sha256": "51510deb2a01df7c71b5b5ee4027a80c43483179a241190a60ff706c1a4ccc47",
+    "canonical_local_path": "/Users/dlev2617/Documents/Papers/~04-In Press/CEUS-Pipeline_for_the_Digitisation_and_Matching_of_Historic_Maps/Publisher Version/1-s2.0-S0198971526001602-main.pdf",
+    "verified": "Title, Ethan Yin / David Levinson author order, DOI, CEUS 132 (2027) 102558, first-page CC BY 4.0 notice, final-page availability and references verified using pdfinfo and text extraction."
+  }
 }
